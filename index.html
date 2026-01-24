@@ -63,6 +63,93 @@ const ensureYearInString = (dateStr) => {
 // 原始預設資料 (已清空，改由外部讀取)
 const INITIAL_RAW_DATA = [];
 
+// --- 元件：法會日期彈窗 (Modal) ---
+        const DharmaModal = ({ isOpen, onClose, data, isLoading, error }) => {
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-all" onClick={onClose}>
+                    <div 
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out]"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Modal Header */}
+                        <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-4 flex justify-between items-center shrink-0">
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <Sparkles className="w-5 h-5 text-amber-100" />
+                                2026 法會日期一覽
+                            </h3>
+                            <button 
+                                onClick={onClose}
+                                className="text-amber-100 hover:text-white hover:bg-amber-700/50 p-1.5 rounded-full transition-colors"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-0 overflow-y-auto custom-scrollbar flex-grow bg-slate-50">
+                            {isLoading ? (
+                                <div className="flex flex-col items-center justify-center h-64 text-slate-500 gap-3">
+                                    <Loader className="w-8 h-8 animate-spin text-amber-500" />
+                                    <p>正在讀取法會資料...</p>
+                                </div>
+                            ) : data.length === 0 ? (
+                                <div className="p-8 text-center text-slate-500">暫無資料</div>
+                            ) : (
+                                <div className="divide-y divide-slate-200">
+                                    {data.map((item, index) => (
+                                        <div key={index} className="bg-white p-4 hover:bg-amber-50 transition-colors flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 border-b border-slate-100 last:border-0">
+                                            {/* 日期區塊 */}
+                                            <div className="flex items-center gap-2 sm:w-32 shrink-0">
+                                                <div className="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-1 rounded uppercase tracking-wider">
+                                                    DATE
+                                                </div>
+                                                <span className="font-mono font-bold text-slate-700 text-lg">
+                                                    {item.date}
+                                                </span>
+                                            </div>
+
+                                            {/* 內容區塊 */}
+                                            <div className="flex-grow">
+                                                <h4 className="font-bold text-slate-800 text-base mb-1">
+                                                    {item.title}
+                                                </h4>
+                                                <div className="flex items-center gap-1.5 text-sm text-slate-500">
+                                                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                                                    {item.location}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {error && (
+                                <div className="bg-orange-50 p-4 text-center border-t border-orange-100">
+                                    <p className="text-xs text-orange-600 flex items-center justify-center gap-1">
+                                        <Info className="w-3 h-3" />
+                                        注意：目前顯示的是內建備用資料 ({error})
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                        
+                        {/* Modal Footer */}
+                        <div className="bg-slate-50 border-t border-slate-200 p-4 shrink-0 text-center text-xs text-slate-400 flex justify-between items-center">
+                             <span>資料來源: {error ? '內建備份' : '2026DharmaServiceDate.json'}</span>
+                             <button 
+                                onClick={onClose}
+                                className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-1.5 rounded shadow-sm transition-colors"
+                             >
+                                關閉
+                             </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+// -------- end of --- 元件：法會日期彈窗 (Modal) ---
+       
 // --- 月曆元件 ---
 const CalendarView = ({ onDateSelect, eventDates }) => {
   const [currentDate, setCurrentDate] = useState(new Date()); 
@@ -165,6 +252,15 @@ const App = () => {
   const [isDataLoaded, setIsDataLoaded] = useState(false); // 狀態設為 false，顯示載入中動畫
   const [viewMode, setViewMode] = useState('list');
 
+
+  // 法會日期相關狀態
+          const [dharmaData, setDharmaData] = useState([]);
+          const [isDharmaLoading, setIsDharmaLoading] = useState(false);
+          const [dharmaError, setDharmaError] = useState(null);
+          const [isDharmaModalOpen, setIsDharmaModalOpen] = useState(false);
+
+
+    
   // ==========================================
   // 2. 關鍵修正：還原 Fetch 讀取功能
   // ==========================================
@@ -200,6 +296,41 @@ const App = () => {
     loadExternalData();
   }, []);
 
+// 讀取法會日期資料 (2026DharmaServiceDate.json)
+          useEffect(() => {
+              const loadDharmaData = async () => {
+                  setIsDharmaLoading(true);
+                  setDharmaError(null); // Reset error
+                  try {
+                      console.log("嘗試從外部檔案讀取 2026DharmaServiceDate.json...");
+                      const response = await fetch(`./2026DharmaServiceDate.json?t=${new Date().getTime()}`);
+                      if (!response.ok) throw new Error(`Status: ${response.status}`);
+                      const jsonData = await response.json();
+                      
+                      if (Array.isArray(jsonData)) {
+                          setDharmaData(jsonData);
+                          console.log("成功讀取外部 2026DharmaServiceDate.json");
+                      } else {
+                          throw new Error("格式錯誤");
+                      }
+                  } catch (error) {
+                      console.warn("讀取法會資料失敗，切換至內建備用資料:", error);
+                      // Fallback: 使用內建資料
+                      setDharmaData(EMBEDDED_DHARMA_DATA);
+                      setDharmaError("無法讀取外部檔案，已顯示內建資料");
+                  } finally {
+                      setIsDharmaLoading(false);
+                  }
+              };
+              loadDharmaData();
+          }, []);
+
+
+    
+
+
+
+    
   // 動態載入 SheetJS (Excel 匯出功能)
   useEffect(() => {
     if (window.XLSX) {
@@ -314,7 +445,17 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col">
-      <header className="bg-emerald-700 text-white shadow-lg shrink-0">
+
+                {/* 法會日期 Modal */}
+              <DharmaModal 
+                  isOpen={isDharmaModalOpen} 
+                  onClose={() => setIsDharmaModalOpen(false)} 
+                  data={dharmaData}
+                  isLoading={isDharmaLoading}
+                  error={dharmaError}
+              />
+       
+        <header className="bg-emerald-700 text-white shadow-lg shrink-0">
         <div className="max-w-5xl mx-auto px-4 py-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -356,7 +497,19 @@ const App = () => {
             
             {/* View Mode Toggle */}
             <div className="flex justify-end border-b border-slate-100 pb-4">
-               <div className="flex bg-slate-100 p-1 rounded-lg">
+                    
+                {/* 左側：法會日期按鈕 (新增) */}
+                       <button 
+                             onClick={() => setIsDharmaModalOpen(true)}
+                             className="group bg-amber-500 hover:bg-amber-400 text-white text-sm font-bold py-1.5 px-4 rounded-lg flex items-center gap-2 transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                          >
+                             <Sparkles className="w-4 h-4 fill-current" />
+                             法會日期
+                       </button>
+                
+                
+                
+                <div className="flex bg-slate-100 p-1 rounded-lg">
                   <button
                     onClick={() => setViewMode('list')}
                     className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
@@ -539,4 +692,5 @@ const App = () => {
 </body>
 
 </html>
+
 
