@@ -153,50 +153,54 @@ const CalendarView = ({ onDateSelect, eventDates }) => {
 };
 
 // --- 主應用程式 ---
+// --- 主應用程式 (GitHub Pages 專用版) ---
 const App = () => {
-  const [rawData, setRawData] = useState(INITIAL_RAW_DATA);
-  const [dataVersion, setDataVersion] = useState(DEFAULT_DATA_VERSION);
+  // 1. 預設資料為空，等待讀取
+  const [rawData, setRawData] = useState([]); 
+  const [dataVersion, setDataVersion] = useState("讀取中...");
   const [searchTerm, setSearchTerm] = useState('');
-  // 移除 searchType，因為現在是統一搜尋
   const [searchUnit, setSearchUnit] = useState('所有單位');
   const [results, setResults] = useState([]);
   const [isXlsxReady, setIsXlsxReady] = useState(false);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
-  
-  // 視圖狀態
+  const [isDataLoaded, setIsDataLoaded] = useState(false); // 狀態設為 false，顯示載入中動畫
   const [viewMode, setViewMode] = useState('list');
 
-  // 初始化：嘗試讀取 RAWData.ini
+  // ==========================================
+  // 2. 關鍵修正：還原 Fetch 讀取功能
+  // ==========================================
   useEffect(() => {
     const loadExternalData = async () => {
         try {
-            // 嘗試讀取 RAWData.ini (請確保此檔案位於 public 資料夾或同層目錄)
-            const response = await fetch('RAWData.json');
-            if (!response.ok) throw new Error("File not found");
-            const text = await response.text();
+            console.log("開始讀取 RAWData.json..."); // 用於除錯
             
-            // 嘗試解析 JSON
-            const jsonData = JSON.parse(text);
+            // 加上時間戳記避免 GitHub 快取舊資料
+            const response = await fetch(`./RAWData.json?t=${new Date().getTime()}`);
             
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const jsonData = await response.json();
+            console.log("成功讀取資料筆數:", jsonData.length);
+
             if (Array.isArray(jsonData)) {
                 setRawData(jsonData);
-                setDataVersion("外部資料 (RAWData.ini)");
+                setDataVersion("GitHub 線上資料");
+                setIsDataLoaded(true);
             } else {
-                throw new Error("Format Error: 檔案內容必須是 JSON 陣列");
+                throw new Error("格式錯誤：檔案內容必須是 JSON 陣列");
             }
         } catch (error) {
-            console.error("讀取 RAWData.ini 失敗:", error);
-            // 錯誤處理：保持空陣列或顯示錯誤提示
-            // 這裡不做動作，維持 INITIAL_RAW_DATA (空陣列)
-        } finally {
-            setIsDataLoaded(true);
+            console.error("讀取失敗:", error);
+            setDataVersion("讀取失敗");
+            alert(`讀取資料失敗，請檢查：\n1. RAWData.json 是否已上傳\n2. 錯誤訊息: ${error.message}`);
         }
     };
 
     loadExternalData();
   }, []);
 
-  // 動態載入 SheetJS (保留匯出功能)
+  // 動態載入 SheetJS (Excel 匯出功能)
   useEffect(() => {
     if (window.XLSX) {
       setIsXlsxReady(true);
@@ -210,6 +214,7 @@ const App = () => {
     document.head.appendChild(script);
   }, []);
 
+  // 資料處理邏輯 (保持不變)
   const flattenedData = useMemo(() => {
     return rawData.flatMap(entry => {
       const displayDate = ensureYearInString(entry.date);
@@ -235,37 +240,34 @@ const App = () => {
 
   const eventDates = useMemo(() => {
     const dates = new Set();
-    results.forEach(item => {
+    const sourceData = (searchTerm || searchUnit !== '所有單位') ? results : flattenedData;
+    sourceData.forEach(item => {
         dates.add(item.date);
     });
     return dates;
-  }, [results]); 
+  }, [results, flattenedData, searchTerm, searchUnit]); 
 
   const handleCalendarDateClick = (dateStr) => {
-    // 點擊月曆日期時，直接將日期填入搜尋欄
     setSearchTerm(dateStr);
   };
 
-  // 統一搜尋邏輯 (同時比對姓名與日期)
+  // 搜尋邏輯 (保持不變)
   useEffect(() => {
     let filtered = flattenedData;
     
-    // 1. 單位篩選
     if (searchUnit !== '所有單位') {
       filtered = filtered.filter(item => item.type === searchUnit);
     }
     
-    // 2. 關鍵字搜尋 (同時查姓名或日期)
     const term = searchTerm.trim().toLowerCase();
     if (term) {
       filtered = filtered.filter(item => {
         const nameMatch = item.name.toLowerCase().includes(term);
-        // 日期比對：比對正規化日期 (2026/01/01) 或 原始日期 (1/1)
         const dateMatch = item.date.includes(term) || item.rawDate.includes(term);
         return nameMatch || dateMatch;
       });
     } else {
-      if (searchUnit === '所有單位') {
+      if (searchUnit === '所有單位' && term === '') {
          filtered = [];
       }
     }
@@ -312,7 +314,6 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col">
-      {/* Header */}
       <header className="bg-emerald-700 text-white shadow-lg shrink-0">
         <div className="max-w-5xl mx-auto px-4 py-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -337,7 +338,6 @@ const App = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-5xl mx-auto px-4 py-8 flex-grow w-full">
         {/* Notice */}
         <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-6 flex items-start gap-3 text-sm text-blue-800">
@@ -456,7 +456,8 @@ const App = () => {
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-h-[300px]">
             {!isDataLoaded ? (
                 <div className="flex flex-col items-center justify-center h-64 text-slate-400">
-                  <p>正在載入資料...</p>
+                  <Loader className="w-8 h-8 mb-4 animate-spin text-emerald-600" />
+                  <p>正在從資料庫讀取資料...</p>
                 </div>
             ) : (searchTerm === '' && searchUnit === '所有單位' ? (
               <div className="flex flex-col items-center justify-center h-64 text-slate-400">
@@ -507,7 +508,6 @@ const App = () => {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="bg-slate-100 border-t border-slate-200 mt-auto py-6 shrink-0">
         <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center text-slate-500 text-sm gap-2">
           <p>© 2026 志工排班管理系統 | 使用 React & Tailwind CSS 建置</p>
@@ -537,4 +537,5 @@ const App = () => {
 
     </script>
 </body>
+
 </html>
