@@ -64,6 +64,23 @@ const ensureYearInString = (dateStr) => {
 const INITIAL_RAW_DATA = [];
 
 // --- 元件：法會日期彈窗 (Modal) ---
+// --- 補上缺失的內建法會資料變數 ---
+const EMBEDDED_DHARMA_DATA = [
+  { "date": "2026/01/11", "title": "嚴聖尊佛成道日法會", "location": "紫竹林寺" },
+  { "date": "2026/01/25", "title": "嚴仁尊佛成道日法會", "location": "紫竹林寺" },
+  { "date": "2026/02/17", "title": "彌勒尊佛佛誕日法會", "location": "紫竹林寺" },
+  { "date": "2026/03/07", "title": "皇母聖道日法會", "location": "紫竹林寺" },
+  { "date": "2026/03/28", "title": "皇母聖誕日法會", "location": "紫竹林寺" },
+  { "date": "2026/04/12", "title": "清明祈福法會", "location": "紫竹林寺" },
+  { "date": "2026/04/26", "title": "盤古尊佛成道日法會", "location": "紫竹林寺" },
+  { "date": "2026/05/09", "title": "媽祖天后聖誕日法會", "location": "紫竹林寺" },
+  { "date": "2026/06/28", "title": "嚴慈尊佛成道日法會", "location": "紫竹林寺" },
+  { "date": "2026/08/01", "title": "皇母出家日法會", "location": "紫竹林寺" },
+  { "date": "2026/08/30", "title": "中元普渡祈福法會", "location": "紫竹林寺" },
+  { "date": "2026/10/17", "title": "媽祖天后成道日法會", "location": "紫竹林寺" },
+  { "date": "2026/10/31", "title": "皇母成道日法會", "location": "紫竹林寺" },
+  { "date": "2026/12/27", "title": "嚴聖尊佛成道日法會", "location": "紫竹林寺" }
+];
         const DharmaModal = ({ isOpen, onClose, data, isLoading, error }) => {
             if (!isOpen) return null;
 
@@ -686,6 +703,7 @@ const App = () => {
 </body>
 
 </html>
+
 
 
 
