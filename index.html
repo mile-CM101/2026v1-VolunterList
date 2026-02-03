@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>志工排班查詢系統 2026 (Fix Version 0.2.4)</title>
+    <title>志工排班查詢系統 2026 (Final Fix v3)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -24,19 +24,18 @@
 <body class="bg-slate-50">
     <div id="root"></div>
 
-    <script type="text/babel" data-type="module" data-presets="react,env">
+    <script type="text/babel" data-type="module" data-presets="react">
         import React, { useState, useEffect, useMemo } from 'react';
         import { createRoot } from 'react-dom/client';
         // 匯入所有圖示
         import * as LucideIcons from 'lucide-react';
 
-        // ========== 修復後的 Icon 元件 ==========
-        // 這個元件會直接渲染 React 元件，解決白屏崩潰問題
+        // ========== Icon 元件 (防止 DOM 衝突的核心) ==========
         const Icon = ({ name, className = "", ...props }) => {
             const IconComponent = LucideIcons[name];
             
             if (!IconComponent) {
-                console.warn(`找不到圖示: ${name}`);
+                // 如果找不到圖示，安靜地回傳 null 或顯示預設圖示，避免報錯
                 return null;
             }
 
@@ -44,7 +43,7 @@
         };
 
         // ========================================== 程式碼開始 =====================================================
-        const APP_VERSION = "App v1.3.4 (Stable)"; 
+        const APP_VERSION = "App v1.3.5 (Require Fix)"; 
         const DEFAULT_DATA_VERSION = "Data from RAWData.json";
 
         // --- 輔助函式 ---
