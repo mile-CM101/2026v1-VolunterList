@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>志工排班查詢系統 2026 (.2.4)</title>
+    <title>志工排班查詢系統 2026 (Fix Version 0.2.4)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -19,33 +19,32 @@
     }
     </script>
 
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
 </head>
 <body class="bg-slate-50">
     <div id="root"></div>
 
-    <script type="text/babel" data-type="module">
+    <script type="text/babel" data-type="module" data-presets="react,env">
         import React, { useState, useEffect, useMemo } from 'react';
         import { createRoot } from 'react-dom/client';
-        // 匯入所有圖示，讓我們可以動態使用
+        // 匯入所有圖示
         import * as LucideIcons from 'lucide-react';
 
         // ========== 修復後的 Icon 元件 ==========
-        // 這個元件會直接渲染 React 元件，而不是操作 DOM，徹底解決崩潰問題
+        // 這個元件會直接渲染 React 元件，解決白屏崩潰問題
         const Icon = ({ name, className = "", ...props }) => {
-            // 從 LucideIcons 物件中動態取出對應的圖示元件
             const IconComponent = LucideIcons[name];
             
             if (!IconComponent) {
                 console.warn(`找不到圖示: ${name}`);
-                return null; // 如果找不到圖示，就不渲染
+                return null;
             }
 
             return <IconComponent className={className} {...props} />;
         };
 
-        // ========================================== 主程式邏輯 =====================================================
-        const APP_VERSION = "App v1.3.3 (Icon Fix)"; 
+        // ========================================== 程式碼開始 =====================================================
+        const APP_VERSION = "App v1.3.4 (Stable)"; 
         const DEFAULT_DATA_VERSION = "Data from RAWData.json";
 
         // --- 輔助函式 ---
