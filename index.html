@@ -3,41 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>志工排班查詢系統 2026</title>
+    <title>志工排班查詢系統 2026 (Fix Version)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 
-    <!-- React 18 UMD -->
-    <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-    
-    <!-- Babel -->
-    <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "lucide-react": "https://esm.sh/lucide-react@0.263.1"
+      }
+    }
+    </script>
+
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="bg-slate-50">
     <div id="root"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect, useMemo, useRef } = React;
-        const ReactDOM = window.ReactDOM;
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useMemo } from 'react';
+        import { createRoot } from 'react-dom/client';
+        // 匯入所有圖示，讓我們可以動態使用
+        import * as LucideIcons from 'lucide-react';
 
-        // ========== 簡化的 Icon 元件 ==========
+        // ========== 修復後的 Icon 元件 ==========
+        // 這個元件會直接渲染 React 元件，而不是操作 DOM，徹底解決崩潰問題
         const Icon = ({ name, className = "", ...props }) => {
-  return (
-    <i
-      data-lucide={name}
-      className={className}
-      {...props}
-    />
-  );
-};
+            // 從 LucideIcons 物件中動態取出對應的圖示元件
+            const IconComponent = LucideIcons[name];
+            
+            if (!IconComponent) {
+                console.warn(`找不到圖示: ${name}`);
+                return null; // 如果找不到圖示，就不渲染
+            }
 
-        // ========================================== 程式碼開始 =====================================================
-        const APP_VERSION = "App v1.3.2 (Final Fix)"; 
+            return <IconComponent className={className} {...props} />;
+        };
+
+        // ========================================== 主程式邏輯 =====================================================
+        const APP_VERSION = "App v1.3.3 (Icon Fix)"; 
         const DEFAULT_DATA_VERSION = "Data from RAWData.json";
 
         // --- 輔助函式 ---
@@ -338,13 +346,6 @@
                 }
             }, []);
 
-            // 初始化 Lucide Icons
-            useEffect(() => {
-                if (window.lucide) {
-                    window.lucide.createIcons();
-                }
-            }, []);
-
             // 資料處理邏輯
             const flattenedData = useMemo(() => {
                 return rawData.flatMap(entry => {
@@ -353,7 +354,7 @@
                     const nameList = Array.isArray(entry.names) ? entry.names : [entry.names];
                     
                     return nameList.map(name => ({
-                       id: `${displayDate}-${name}`,
+                       id: `${displayDate}-${name}-${Math.random()}`, // 加入亂數避免 key 重複
                         rawDate: displayDate,
                         date: normDate,
                         type: entry.type,
@@ -670,7 +671,7 @@
 
         // 啟動 React
         const container = document.getElementById('root');
-        const root = ReactDOM.createRoot(container);
+        const root = createRoot(container);
         root.render(<App />);
 
     </script>
