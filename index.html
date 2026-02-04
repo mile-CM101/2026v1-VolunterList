@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>志工排班查詢系統 2026 (Calendar V2)</title>
+    <title>志工排班查詢系統 2026 (Calendar V3 UI)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -19,6 +19,16 @@
     </script>
 
     <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
+    <style>
+        /* 隱藏滾動條但保留功能 */
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+        }
+    </style>
 </head>
 <body class="bg-slate-50">
     <div id="root"></div>
@@ -35,7 +45,7 @@
             return <IconComponent className={className} {...props} />;
         };
 
-        const APP_VERSION = "App v3.6.0 (Loc & Auto-Jump)"; 
+        const APP_VERSION = "App v3.7.0 (UI Enhanced)"; 
         const DEFAULT_DATA_VERSION = "Data 2026 (Embedded)";
 
         // --- 輔助函式 ---
@@ -66,7 +76,7 @@
         const EMBEDDED_DHARMA_DATA = [
             { "date": "2026/01/11", "title": "嚴聖尊佛成道日法會", "location": "新竹 冥聖九華山大地藏王佛玄皇寺" },
             { "date": "2026/01/25", "title": "嚴仁尊佛成道日法會", "location": "新竹 冥聖九華山大地藏王佛玄皇寺" },
-            { "date": "2026/02/17", "title": "彌勒尊佛佛誕日法會", "location": "新店 陀彌天山紫竹林寺" },
+            { "date": "2026/02/17", "title": "彌勒尊佛佛誕日法會", "location": "新竹 冥聖九華山大地藏王佛玄皇寺" },
             { "date": "2026/03/07", "title": "皇母聖道日法會", "location": "新店 陀彌天山紫竹林寺" },
             { "date": "2026/03/08", "title": "皇母聖道日法會", "location": "新店 陀彌天山紫竹林寺" },
             { "date": "2026/03/28", "title": "皇母聖誕日法會", "location": "新店 陀彌天山紫竹林寺" },
@@ -81,11 +91,7 @@
             { "date": "2026/10/17", "title": "媽祖天后成道日法會", "location": "台南 彌勒三皇母寶殿九龍媽祖廟" },
             { "date": "2026/10/31", "title": "皇母成道日法會", "location": "新店 陀彌天山紫竹林寺" },
             { "date": "2026/11/01", "title": "皇母成道日法會", "location": "新店 陀彌天山紫竹林寺" },
-            { "date": "2026/12/27", "title": "嚴聖尊佛成道日法會", "location": "新店 陀彌天山紫竹林寺" }
-        ];
-
-        const INITIAL_RAW_DATA = [
-           
+            { "date": "2026/12/27", "title": "嚴聖尊佛成道日法會", "location": "新竹 冥聖九華山大地藏王佛玄皇寺" }
         ];
 
         // --- 法會日期彈窗 (Modal) ---
@@ -228,55 +234,66 @@
             const renderDays = () => {
                 const days = [];
                 for (let i = 0; i < firstDay; i++) {
-                    days.push(<div key={`empty-${i}`} className="h-24 sm:h-28 bg-slate-50/50 border border-slate-100"></div>);
+                    days.push(<div key={`empty-${i}`} className="h-24 sm:h-32 bg-slate-50/50 border border-slate-100"></div>);
                 }
                 for (let day = 1; day <= daysInMonth; day++) {
                     const dateKey = `${currentDate.getFullYear()}/${String(currentDate.getMonth() + 1).padStart(2, '0')}/${String(day).padStart(2, '0')}`;
-                    const hasEvent = eventDates.has(dateKey);
-                    const dharmaInfo = dharmaDatesMap.get(dateKey);
+                    const hasEvent = eventDates.has(dateKey); // 志工排班
+                    const dharmaInfo = dharmaDatesMap.get(dateKey); // 法會
                     const hasDharma = !!dharmaInfo;
                     
                     const dayOfWeek = (firstDay + day - 1) % 7;
                     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
+                    // 檢查是否為當前搜尋選中的日期
+                    const isSelected = searchTerm && (searchTerm === dateKey || searchTerm.replace(/^2026\//, '') === `${currentDate.getMonth() + 1}/${day}`);
+
                     days.push(
                         <div 
                             key={day} 
                             onClick={() => onDateSelect(dateKey)}
-                            className={`h-24 sm:h-28 border border-slate-200 bg-white hover:bg-emerald-50 transition cursor-pointer p-1 sm:p-1.5 flex flex-col relative group overflow-hidden
-                                ${isWeekend ? 'bg-slate-50' : ''}`}
+                            className={`h-24 sm:h-32 border border-slate-200 bg-white hover:bg-emerald-50 transition cursor-pointer p-1 sm:p-1.5 flex flex-col relative group overflow-hidden
+                                ${isWeekend ? 'bg-slate-50' : ''}
+                                ${isSelected ? 'ring-2 ring-emerald-500 ring-inset bg-emerald-50' : ''}
+                            `}
                         >
-                            <div className="flex justify-between items-start mb-1">
-                                <span className={`text-sm font-semibold w-6 h-6 flex items-center justify-center rounded-full 
+                            <div className="flex justify-between items-start mb-0.5 shrink-0">
+                                <span className={`text-sm font-semibold w-6 h-6 flex items-center justify-center rounded-full transition-colors
                                     ${isWeekend ? 'text-red-500' : 'text-slate-700'} 
-                                    ${hasEvent ? 'bg-emerald-100 text-emerald-800' : ''}`}
+                                    ${hasEvent ? 'bg-emerald-100 text-emerald-800' : ''}
+                                    ${isSelected ? 'bg-emerald-600 text-white' : ''}
+                                    `}
                                 >
                                     {day}
                                 </span>
-                                {hasDharma && (
-                                    <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" title={dharmaInfo.title}></span>
-                                )}
                             </div>
                             
-                            <div className="flex flex-col gap-0.5 w-full">
-                                {hasDharma && (
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] leading-tight text-purple-700 font-bold truncate bg-purple-100/50 px-1 py-0.5 rounded">
-                                            {dharmaInfo.title.replace(/法會|日/g, '')}
-                                        </span>
-                                        <span className="text-[9px] text-gray-500 px-1 truncate mt-0.5">
-                                           <Icon name="MapPin" className="inline w-2 h-2 mr-0.5" />
-                                           {dharmaInfo.location.split(' ')[0]}
-                                        </span>
-                                    </div>
-                                )}
+                            <div className="flex flex-col w-full flex-grow overflow-hidden gap-1">
+                                
+                                {/* 1. 排班資訊 (上排) */}
                                 {hasEvent && (
-                                    <div className="flex items-center gap-1 mt-1 px-1">
+                                    <div className="flex items-center gap-1 mt-0.5 px-0.5 shrink-0">
                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 block shrink-0"></span>
-                                       <span className="text-[10px] text-emerald-600 font-medium hidden sm:inline truncate">排班</span>
-                                       <span className="text-[10px] text-emerald-600 font-medium sm:hidden truncate">班</span>
+                                       <span className="text-[11px] text-emerald-600 font-medium truncate">排班</span>
                                     </div>
                                 )}
+
+                                {/* 2. 法會資訊 (下排，樣式仿照圖片) */}
+                                {hasDharma && (
+                                    <div className="mt-auto sm:mt-1 bg-purple-50 rounded px-1.5 py-1 border border-purple-100/60 shadow-sm overflow-hidden min-h-[36px] flex flex-col justify-center">
+                                        <div className="flex items-center gap-1 mb-0.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0"></span>
+                                            <span className="text-[10px] leading-tight text-purple-700 font-bold truncate">
+                                                {dharmaInfo.title.replace(/法會|日/g, '')}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-0.5 text-[9px] text-slate-400 pl-2.5 truncate">
+                                            <Icon name="MapPin" className="w-2 h-2 shrink-0 opacity-70" />
+                                            <span className="truncate">{dharmaInfo.location.split(' ')[0]}</span>
+                                        </div>
+                                    </div>
+                                )}
+                                
                             </div>
                         </div>
                     );
@@ -314,10 +331,10 @@
                     
                     <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex gap-4 text-xs text-slate-500 justify-end">
                         <div className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-purple-500"></span> 法會日期
+                             <span className="w-2 h-2 rounded-full bg-emerald-500"></span> 志工排班
                         </div>
                         <div className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span> 志工排班
+                             <span className="w-2 h-2 rounded-full bg-purple-500"></span> 法會日期
                         </div>
                     </div>
                 </div>
@@ -445,6 +462,7 @@
 
             const handleCalendarDateClick = (dateStr) => {
                 setSearchTerm(dateStr);
+                // 如果在月曆模式下點擊，可以考慮滾動到結果區，但目前保持原位即可
             };
 
             useEffect(() => {
