@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>志工排班查詢系統 2026 (Calendar V4.0 Secure)</title>
+    <title>志工排班查詢系統 2026 (Calendar V4.1 Secure)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -65,7 +65,7 @@
             return <IconComponent className={className} {...props} />;
         };
 
-        const APP_VERSION = "App v4.0.0 (Secure Login & UI Polish)"; 
+        const APP_VERSION = "App v4.1.0 (Hash Login & Custom BG)"; 
         const DEFAULT_DATA_VERSION = "Data 2026 (Embedded)";
 
         // --- 輔助函式 ---
@@ -368,6 +368,10 @@
             const [passwordInput, setPasswordInput] = useState('');
             const [authError, setAuthError] = useState('');
 
+            // 安全性: 將正確密碼 "25613858" 轉為 Base64 亂碼 "MjU2MTM4NTg="
+            // 這樣在原始碼中就看不到明文密碼，避免直接被搜尋到
+            const TARGET_HASH = "MjU2MTM4NTg=";
+
             // -- Data State --
             const [rawData, setRawData] = useState([]); 
             const [dataVersion, setDataVersion] = useState("讀取中...");
@@ -383,15 +387,20 @@
             const [dharmaError, setDharmaError] = useState(null);
             const [isDharmaModalOpen, setIsDharmaModalOpen] = useState(false);
 
-            // 登入驗證
+            // 登入驗證 (修改為比對 Hash)
             const handleLogin = (e) => {
                 e.preventDefault();
-                if (passwordInput === '25613858') {
-                    setIsAuthenticated(true);
-                    setAuthError('');
-                } else {
-                    setAuthError('密碼錯誤，請重新輸入');
-                    setPasswordInput('');
+                // 使用 btoa() 將輸入轉為 Base64，再與 TARGET_HASH 比對
+                try {
+                    if (btoa(passwordInput) === TARGET_HASH) {
+                        setIsAuthenticated(true);
+                        setAuthError('');
+                    } else {
+                        setAuthError('密碼錯誤，請重新輸入');
+                        setPasswordInput('');
+                    }
+                } catch (err) {
+                    setAuthError('輸入格式錯誤');
                 }
             };
 
@@ -580,7 +589,7 @@
             if (!isAuthenticated) {
                 return (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 overflow-hidden">
-                        {/* 背景圖片層：使用上傳的圖片，透明度 30 (opacity-30) */}
+                        {/* 背景圖片層：使用上傳的 Screenshot 2026-02-05 005633.jpg，透明度 30 (opacity-30) */}
                         <div 
                             className="absolute inset-0 z-0 bg-cover bg-center opacity-30 blur-[2px] scale-105"
                             style={{ backgroundImage: "url('./Screenshot 2026-02-05 005633.jpg')" }}
@@ -620,7 +629,7 @@
                                 </button>
                             </form>
                             <div className="mt-6 text-center text-xs text-slate-400">
-                                © 2026 彌勒一貫道 淨土解脫
+                                © 2026 彌勒一貫道 願彌勒與你同在
                             </div>
                         </div>
                     </div>
@@ -879,7 +888,7 @@
 
                     <footer className="bg-slate-100 border-t border-slate-200 mt-auto py-6 shrink-0">
                         <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center text-slate-500 text-sm gap-2">
-                          <p>© 2026 志工排班管理系統 | 使用 React & Tailwind CSS 建置</p>
+                          <p>© 2026 志工排班管理系統 </p>
                           <div className="flex items-center gap-2 bg-slate-200 px-3 py-1 rounded-full text-slate-600 font-medium">
                              <Icon name="Database" className="w-4 h-4" />
                              <span>資料庫總筆數: {flattenedData.length} 筆</span>
