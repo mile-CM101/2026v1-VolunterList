@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>志工排班查詢系統 2026 (Final Fix v3)</title>
+    <title>志工排班查詢系統 2026 (Calendar Update)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 
     <script type="importmap">
@@ -27,24 +26,18 @@
     <script type="text/babel" data-type="module" data-presets="react">
         import React, { useState, useEffect, useMemo } from 'react';
         import { createRoot } from 'react-dom/client';
-        // 匯入所有圖示
         import * as LucideIcons from 'lucide-react';
 
         // ========== Icon 元件 (防止 DOM 衝突的核心) ==========
         const Icon = ({ name, className = "", ...props }) => {
             const IconComponent = LucideIcons[name];
-            
-            if (!IconComponent) {
-                // 如果找不到圖示，安靜地回傳 null 或顯示預設圖示，避免報錯
-                return null;
-            }
-
+            if (!IconComponent) return null;
             return <IconComponent className={className} {...props} />;
         };
 
         // ========================================== 程式碼開始 =====================================================
-        const APP_VERSION = "App v1.3.5 (Require Fix)"; 
-        const DEFAULT_DATA_VERSION = "Data from RAWData.json";
+        const APP_VERSION = "App v3.6.0 (Loc & Auto-Jump)"; 
+        const DEFAULT_DATA_VERSION = "Data 2026.01.15 (Embedded)";
 
         // --- 輔助函式 ---
         const normalizeDate = (dateStr) => {
@@ -72,21 +65,28 @@
 
         // 內建法會資料
         const EMBEDDED_DHARMA_DATA = [
-            { "date": "2026/01/11", "title": "嚴聖尊佛成道日法會", "location": "紫竹林寺" },
-            { "date": "2026/01/25", "title": "嚴仁尊佛成道日法會", "location": "紫竹林寺" },
-            { "date": "2026/02/17", "title": "彌勒尊佛佛誕日法會", "location": "紫竹林寺" },
-            { "date": "2026/03/07", "title": "皇母聖道日法會", "location": "紫竹林寺" },
-            { "date": "2026/03/28", "title": "皇母聖誕日法會", "location": "紫竹林寺" },
-            { "date": "2026/04/12", "title": "清明祈福法會", "location": "紫竹林寺" },
-            { "date": "2026/04/26", "title": "盤古尊佛成道日法會", "location": "紫竹林寺" },
-            { "date": "2026/05/09", "title": "媽祖天后聖誕日法會", "location": "紫竹林寺" },
-            { "date": "2026/06/28", "title": "嚴慈尊佛成道日法會", "location": "紫竹林寺" },
-            { "date": "2026/08/01", "title": "皇母出家日法會", "location": "紫竹林寺" },
-            { "date": "2026/08/30", "title": "中元普渡祈福法會", "location": "紫竹林寺" },
-            { "date": "2026/10/17", "title": "媽祖天后成道日法會", "location": "紫竹林寺" },
-            { "date": "2026/10/31", "title": "皇母成道日法會", "location": "紫竹林寺" },
-            { "date": "2026/12/27", "title": "嚴聖尊佛成道日法會", "location": "紫竹林寺" }
+            { "date": "2026/01/11", "title": "嚴聖尊佛成道日法會", "location": "新竹 冥聖九華山大地藏王佛玄皇寺" },
+            { "date": "2026/01/25", "title": "嚴仁尊佛成道日法會", "location": "新竹 冥聖九華山大地藏王佛玄皇寺" },
+            { "date": "2026/02/17", "title": "彌勒尊佛佛誕日法會", "location": "新店 陀彌天山紫竹林寺" },
+            { "date": "2026/03/07", "title": "皇母聖道日法會", "location": "新店 陀彌天山紫竹林寺" },
+            { "date": "2026/03/08", "title": "皇母聖道日法會", "location": "新店 陀彌天山紫竹林寺" },
+            { "date": "2026/03/28", "title": "皇母聖誕日法會", "location": "新店 陀彌天山紫竹林寺" },
+            { "date": "2026/03/29", "title": "皇母聖誕日法會", "location": "新店 陀彌天山紫竹林寺" },
+            { "date": "2026/04/12", "title": "清明祈福法會", "location": "新竹 冥聖九華山大地藏王佛玄皇寺" },
+            { "date": "2026/04/26", "title": "盤古尊佛成道日法會", "location": "深坑 大正金剛轉輪寺" },
+            { "date": "2026/05/09", "title": "媽祖天后聖誕日法會", "location": "台南 彌勒三皇母寶殿九龍媽祖廟" },
+            { "date": "2026/06/28", "title": "嚴慈尊佛成道日法會", "location": "新竹 冥聖九華山大地藏王佛玄皇寺" },
+            { "date": "2026/08/01", "title": "皇母出家日法會", "location": "新店 陀彌天山紫竹林寺" },
+            { "date": "2026/08/02", "title": "皇母出家日法會", "location": "新店 陀彌天山紫竹林寺" },
+            { "date": "2026/08/30", "title": "中元普渡祈福法會", "location": "新竹 冥聖九華山大地藏王佛玄皇寺" },
+            { "date": "2026/10/17", "title": "媽祖天后成道日法會", "location": "台南 彌勒三皇母寶殿九龍媽祖廟" },
+            { "date": "2026/10/31", "title": "皇母成道日法會", "location": "新店 陀彌天山紫竹林寺" },
+            { "date": "2026/11/01", "title": "皇母成道日法會", "location": "新店 陀彌天山紫竹林寺" },
+            { "date": "2026/12/27", "title": "嚴聖尊佛成道日法會", "location": "新店 陀彌天山紫竹林寺" }
         ];
+
+        // 原始預設資料 (已清空，改由外部讀取)
+        const INITIAL_RAW_DATA = [];
 
         // --- 法會日期彈窗 (Modal) ---
         const DharmaModal = ({ isOpen, onClose, data, isLoading, error }) => {
@@ -172,9 +172,51 @@
             );
         };
 
-        // --- 月曆元件 ---
-        const CalendarView = ({ onDateSelect, eventDates }) => {
+        // --- 月曆元件 (更新版：支援法會標記與地點) ---
+        const CalendarView = ({ onDateSelect, eventDates, dharmaDatesMap, searchTerm }) => {
             const [currentDate, setCurrentDate] = useState(new Date()); 
+
+            // 自動跳轉月份邏輯
+            useEffect(() => {
+                if (!searchTerm) return;
+                
+                // 嘗試解析日期 (格式: 2026/2, 2/15)
+                // 優先匹配 "YYYY/M" 或 "M/D"
+                // 正則解釋: 
+                // ^(202\d)?[/\-\.]?(\d{1,2})([/\-\.](\d{1,2})?)?
+                // Group 1: 年份 (可選)
+                // Group 2: 月份 (必須)
+                
+                // 簡單判斷：如果輸入的是數字開頭
+                if (/^\d/.test(searchTerm)) {
+                    const parts = searchTerm.split(/[\/\-\.]/);
+                    let year = 2026;
+                    let month = -1;
+
+                    if (parts.length >= 1) {
+                         const p1 = parseInt(parts[0], 10);
+                         
+                         if (parts.length === 1) {
+                             // 輸入單一數字，可能是月份 (1-12)
+                             if (p1 >= 1 && p1 <= 12) month = p1;
+                         } else {
+                             const p2 = parseInt(parts[1], 10);
+                             if (p1 > 1000) {
+                                 // 格式：2026/2
+                                 year = p1;
+                                 if (p2 >= 1 && p2 <= 12) month = p2;
+                             } else {
+                                 // 格式：2/15 -> 視為 2月
+                                 if (p1 >= 1 && p1 <= 12) month = p1;
+                             }
+                         }
+                    }
+
+                    if (month !== -1 && year === 2026) {
+                        setCurrentDate(new Date(year, month - 1, 1));
+                    }
+                }
+            }, [searchTerm]);
 
             const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
             const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
@@ -195,11 +237,13 @@
             const renderDays = () => {
                 const days = [];
                 for (let i = 0; i < firstDay; i++) {
-                    days.push(<div key={`empty-${i}`} className="h-20 sm:h-24 bg-slate-50/50 border border-slate-100"></div>);
+                    days.push(<div key={`empty-${i}`} className="h-24 sm:h-28 bg-slate-50/50 border border-slate-100"></div>);
                 }
                 for (let day = 1; day <= daysInMonth; day++) {
                     const dateKey = `${currentDate.getFullYear()}/${String(currentDate.getMonth() + 1).padStart(2, '0')}/${String(day).padStart(2, '0')}`;
                     const hasEvent = eventDates.has(dateKey);
+                    const dharmaInfo = dharmaDatesMap.get(dateKey); // 取得法會物件
+                    const hasDharma = !!dharmaInfo;
                     
                     const dayOfWeek = (firstDay + day - 1) % 7;
                     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
@@ -208,22 +252,43 @@
                         <div 
                             key={day} 
                             onClick={() => onDateSelect(dateKey)}
-                            className={`h-20 sm:h-24 border border-slate-200 bg-white hover:bg-emerald-50 transition cursor-pointer p-1 sm:p-2 flex flex-col relative group
+                            className={`h-24 sm:h-28 border border-slate-200 bg-white hover:bg-emerald-50 transition cursor-pointer p-1 sm:p-1.5 flex flex-col relative group overflow-hidden
                                 ${isWeekend ? 'bg-slate-50' : ''}`}
                         >
-                            <span className={`text-sm font-semibold w-6 h-6 flex items-center justify-center rounded-full 
-                                ${isWeekend ? 'text-red-500' : 'text-slate-700'} 
-                                ${hasEvent ? 'bg-emerald-100 text-emerald-800' : ''}`}
-                            >
-                                {day}
-                            </span>
+                            <div className="flex justify-between items-start mb-1">
+                                <span className={`text-sm font-semibold w-6 h-6 flex items-center justify-center rounded-full 
+                                    ${isWeekend ? 'text-red-500' : 'text-slate-700'} 
+                                    ${hasEvent ? 'bg-emerald-100 text-emerald-800' : ''}`}
+                                >
+                                    {day}
+                                </span>
+                                {/* 法會標記 (紫點) */}
+                                {hasDharma && (
+                                    <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" title={dharmaInfo.title}></span>
+                                )}
+                            </div>
                             
-                            {hasEvent && (
-                                <div className="mt-1 flex flex-wrap gap-1 content-start">
-                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 block"></span>
-                                   <span className="text-[10px] text-emerald-600 font-medium hidden sm:inline truncate w-full">有點擊查看</span>
-                                </div>
-                            )}
+                            {/* 事件內容預覽 */}
+                            <div className="flex flex-col gap-0.5 w-full">
+                                {hasDharma && (
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] leading-tight text-purple-700 font-bold truncate bg-purple-100/50 px-1 py-0.5 rounded">
+                                            {dharmaInfo.title.replace(/法會|日/g, '')}
+                                        </span>
+                                        <span className="text-[9px] text-gray-500 px-1 truncate mt-0.5">
+                                           <Icon name="MapPin" className="inline w-2 h-2 mr-0.5" />
+                                           {dharmaInfo.location.split(' ')[0]}
+                                        </span>
+                                    </div>
+                                )}
+                                {hasEvent && (
+                                    <div className="flex items-center gap-1 mt-1 px-1">
+                                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 block shrink-0"></span>
+                                       <span className="text-[10px] text-emerald-600 font-medium hidden sm:inline truncate">排班</span>
+                                       <span className="text-[10px] text-emerald-600 font-medium sm:hidden truncate">班</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     );
                 }
@@ -256,6 +321,16 @@
 
                     <div className="grid grid-cols-7 bg-slate-100 gap-px border-b border-slate-200">
                         {renderDays()}
+                    </div>
+                    
+                    {/* 圖例說明 */}
+                    <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex gap-4 text-xs text-slate-500 justify-end">
+                        <div className="flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-purple-500"></span> 法會日期
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span> 志工排班
+                        </div>
                     </div>
                 </div>
             );
@@ -336,6 +411,17 @@
                 };
                 loadDharmaData();
             }, []);
+            
+            // 建立法會日期 Map (供月曆快速查找)
+            const dharmaDatesMap = useMemo(() => {
+                const map = new Map();
+                dharmaData.forEach(item => {
+                    // map key: YYYY/MM/DD
+                    // map value: 全物件 {title, location, date}
+                    map.set(item.date, item);
+                });
+                return map;
+            }, [dharmaData]);
 
             // 檢查 SheetJS 是否載入
             useEffect(() => {
@@ -352,7 +438,7 @@
                     const nameList = Array.isArray(entry.names) ? entry.names : [entry.names];
                     
                     return nameList.map(name => ({
-                       id: `${displayDate}-${name}-${Math.random()}`, // 加入亂數避免 key 重複
+                       id: `${displayDate}-${name}-${Math.random()}`,
                         rawDate: displayDate,
                         date: normDate,
                         type: entry.type,
@@ -398,7 +484,7 @@
                     });
                 } else {
                     if (searchUnit === '所有單位' && term === '') {
-                       filtered = [];
+                        filtered = [];
                     }
                 }
                 
@@ -444,6 +530,8 @@
 
             return (
                 <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col">
+
+                    {/* 法會日期 Modal */}
                     <DharmaModal 
                         isOpen={isDharmaModalOpen} 
                         onClose={() => setIsDharmaModalOpen(false)} 
@@ -451,7 +539,7 @@
                         isLoading={isDharmaLoading}
                         error={dharmaError}
                     />
-             
+                
                     <header className="bg-emerald-700 text-white shadow-lg shrink-0">
                         <div className="max-w-5xl mx-auto px-4 py-4">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -477,15 +565,14 @@
                     </header>
 
                     <main className="max-w-5xl mx-auto px-4 py-8 flex-grow w-full">
-                        {/* Notice */}
                         <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-6 flex items-start gap-3 text-sm text-blue-800">
-                           <Icon name="AlertCircle" className="w-5 h-5 shrink-0 mt-0.5" />
-                           <div>
-                             <p><strong>資料說明：</strong></p>
-                             <ul className="list-disc list-inside mt-1 space-y-1 text-blue-700">
-                               <li><strong>志工排班包含下列志工：</strong> 大愛、大佛手、聖地輪值、道場功法、大正功法、護衛隊、讀書會、攝影座談會。</li>
-                              </ul>
-                           </div>
+                            <Icon name="AlertCircle" className="w-5 h-5 shrink-0 mt-0.5" />
+                            <div>
+                                <p><strong>資料說明：</strong></p>
+                                <ul className="list-disc list-inside mt-1 space-y-1 text-blue-700">
+                                    <li><strong>志工排班包含下列志工：</strong> 大愛、大佛手、聖地輪值、道場功法、大正功法、護衛隊、讀書會、攝影座談會。</li>
+                                </ul>
+                            </div>
                         </div>
 
                         {/* Search Controls */}
@@ -553,7 +640,7 @@
                                       type="text"
                                       value={searchTerm}
                                       onChange={(e) => setSearchTerm(e.target.value)}
-                                      placeholder="(例如: 彌勒澄明 或 2026/01/01)"
+                                      placeholder="查姓名或日期 (例如: 彌勒澄明 或 2026/01/01)..."
                                       className="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm"
                                     />
                                   </div>
@@ -564,7 +651,12 @@
                         {/* Content Area */}
                         {viewMode === 'calendar' && (
                           <div className="mb-6">
-                            <CalendarView onDateSelect={handleCalendarDateClick} eventDates={eventDates} />
+                            <CalendarView 
+                                onDateSelect={handleCalendarDateClick} 
+                                eventDates={eventDates} 
+                                dharmaDatesMap={dharmaDatesMap}
+                                searchTerm={searchTerm} 
+                            />
                           </div>
                         )}
                         
