@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>志工排班查詢系統 2026</title>
+    <title>志工排班查詢系統 2026 (Calendar V2)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -35,7 +35,7 @@
             return <IconComponent className={className} {...props} />;
         };
 
-        const APP_VERSION = "App v3.5.0 (Deploy Ready)"; 
+        const APP_VERSION = "App v3.6.0 (Loc & Auto-Jump)"; 
         const DEFAULT_DATA_VERSION = "Data 2026 (Embedded)";
 
         // --- 輔助函式 ---
@@ -66,7 +66,7 @@
         const EMBEDDED_DHARMA_DATA = [
             { "date": "2026/01/11", "title": "嚴聖尊佛成道日法會", "location": "新竹 冥聖九華山大地藏王佛玄皇寺" },
             { "date": "2026/01/25", "title": "嚴仁尊佛成道日法會", "location": "新竹 冥聖九華山大地藏王佛玄皇寺" },
-            { "date": "2026/02/17", "title": "彌勒尊佛佛誕日法會", "location": "新店 陀彌天山紫竹林寺" },
+            { "date": "2026/02/17", "title": "彌勒尊佛佛誕日法會", "location": "新竹 冥聖九華山大地藏王佛玄皇寺" },
             { "date": "2026/03/07", "title": "皇母聖道日法會", "location": "新店 陀彌天山紫竹林寺" },
             { "date": "2026/03/08", "title": "皇母聖道日法會", "location": "新店 陀彌天山紫竹林寺" },
             { "date": "2026/03/28", "title": "皇母聖誕日法會", "location": "新店 陀彌天山紫竹林寺" },
@@ -81,7 +81,7 @@
             { "date": "2026/10/17", "title": "媽祖天后成道日法會", "location": "台南 彌勒三皇母寶殿九龍媽祖廟" },
             { "date": "2026/10/31", "title": "皇母成道日法會", "location": "新店 陀彌天山紫竹林寺" },
             { "date": "2026/11/01", "title": "皇母成道日法會", "location": "新店 陀彌天山紫竹林寺" },
-            { "date": "2026/12/27", "title": "嚴聖尊佛成道日法會", "location": "新店 陀彌天山紫竹林寺" }
+            { "date": "2026/12/27", "title": "嚴聖尊佛成道日法會", "location": "新竹 冥聖九華山大地藏王佛玄皇寺" }
         ];
 
         const INITIAL_RAW_DATA = [
@@ -93,7 +93,7 @@
             { "date": "2026/1/11 (日)", "type": "大愛", "names": ["彌勒決立"], "role": "志工", "content": "嚴聖尊佛成道日法會 農曆11月23日" },
             { "date": "2026/1/17 (六)", "type": "大愛", "names": ["彌勒信永"], "role": "志工", "content": "" },
             { "date": "2026/1/18 (日)", "type": "大愛", "names": ["彌勒仁行"], "role": "志工", "content": "彌勒一貫道講座＋慶生會" },
-            { "date": "2026/1/24 (六)", "type": "大愛", "names": ["彌德元"], "role": "志工", "content": "" },
+            { "date": "2026/1/24 (六)", "type": "大愛", "names": ["彌勒德元"], "role": "志工", "content": "" },
             { "date": "2026/1/25 (日)", "type": "大愛", "names": ["彌勒行慈"], "role": "志工", "content": "嚴仁尊佛成道日法會 農曆12月7日" },
             { "date": "2026/1/31 (六)", "type": "大愛", "names": ["彌勒知行"], "role": "志工", "content": "" },
             { "date": "2026/2/1 (日)", "type": "大愛", "names": ["彌勒尼恒"], "role": "志工", "content": "捐血、彌勒一貫道講座＋慶生會 禮佛日" },
@@ -103,7 +103,7 @@
             { "date": "2026/2/15 (日)", "type": "大愛", "names": ["彌勒決立"], "role": "志工", "content": "" },
             { "date": "2026/2/17 (二)", "type": "大愛", "names": ["彌勒明圓"], "role": "志工", "content": "農曆正月初一 彌勒尊佛佛誕日法會" },
             { "date": "2026/2/18 (三)", "type": "大愛", "names": ["彌勒易決"], "role": "志工", "content": "農曆正月初二 春節連假" },
-            { "date": "2026/2/19 (四)", "type": "大愛", "names": ["彌德元"], "role": "志工", "content": "農曆正月初三 春節連假" },
+            { "date": "2026/2/19 (四)", "type": "大愛", "names": ["彌勒德元"], "role": "志工", "content": "農曆正月初三 春節連假" },
             { "date": "2026/2/20 (五)", "type": "大愛", "names": ["彌勒行慈"], "role": "志工", "content": "農曆正月初四 列假日補假 (小年夜)" },
             { "date": "2026/2/21 (六)", "type": "大愛", "names": ["彌勒知行"], "role": "志工", "content": "農曆正月初五" },
             { "date": "2026/2/22 (日)", "type": "大愛", "names": ["彌勒聞元"], "role": "志工", "content": "農曆正月初六" },
@@ -113,7 +113,7 @@
             { "date": "2026/3/7 (六)", "type": "大愛", "names": ["彌勒仁行"], "role": "志工", "content": "皇母聖道日法會" },
             { "date": "2026/3/8 (日)", "type": "大愛", "names": ["彌勒明圓"], "role": "志工", "content": "皇母聖道日法會 農曆1月20日" },
             { "date": "2026/3/14 (六)", "type": "大愛", "names": ["彌勒易決"], "role": "志工", "content": "" },
-            { "date": "2026/3/15 (日)", "type": "大愛", "names": ["彌德元"], "role": "志工", "content": "彌勒一貫道講座＋慶生會" },
+            { "date": "2026/3/15 (日)", "type": "大愛", "names": ["彌勒德元"], "role": "志工", "content": "彌勒一貫道講座＋慶生會" },
             { "date": "2026/3/21 (六)", "type": "大愛", "names": ["彌勒行慈"], "role": "志工", "content": "" },
             { "date": "2026/3/22 (日)", "type": "大愛", "names": ["彌勒知行"], "role": "志工", "content": "" },
             { "date": "2026/3/28 (六)", "type": "大愛", "names": ["彌勒信永"], "role": "志工", "content": "皇母聖誕日法會" },
@@ -123,14 +123,14 @@
             { "date": "2026/4/5 (日)", "type": "大愛", "names": ["彌勒靜羽"], "role": "志工", "content": "捐血 清明節  禮佛日" },
             { "date": "2026/4/11 (六)", "type": "大愛", "names": ["彌勒仁行"], "role": "志工", "content": "" },
             { "date": "2026/4/12 (日)", "type": "大愛", "names": ["彌勒易決"], "role": "志工", "content": "清明祈福法會 農曆2月25日" },
-            { "date": "2026/4/18 (六)", "type": "大愛", "names": ["彌德元"], "role": "志工", "content": "" },
+            { "date": "2026/4/18 (六)", "type": "大愛", "names": ["彌勒德元"], "role": "志工", "content": "" },
             { "date": "2026/4/19 (日)", "type": "大愛", "names": ["彌勒敬合"], "role": "志工", "content": "彌勒一貫道講座＋慶生會" },
             { "date": "2026/4/25 (六)", "type": "大愛", "names": ["彌勒正識"], "role": "志工", "content": "" },
             { "date": "2026/4/26 (日)", "type": "大愛", "names": ["彌勒行慈"], "role": "志工", "content": "盤古尊佛成道日法會 農曆3月10日" },
             { "date": "2026/5/1 (五)", "type": "大愛", "names": ["彌勒聞元"], "role": "志工", "content": "勞動節" },
             { "date": "2026/5/2 (六)", "type": "大愛", "names": ["彌勒尼恒"], "role": "志工", "content": "" },
             { "date": "2026/5/3 (日)", "type": "大愛", "names": ["彌勒決立"], "role": "志工", "content": "禮佛日" },
-            { "date": "2026/5/9 (六)", "type": "大愛", "names": ["彌德元"], "role": "志工", "content": "媽祖天后聖誕日法會" },
+            { "date": "2026/5/9 (六)", "type": "大愛", "names": ["彌勒德元"], "role": "志工", "content": "媽祖天后聖誕日法會" },
             { "date": "2026/5/10 (日)", "type": "大愛", "names": ["彌勒易決"], "role": "志工", "content": "捐血" },
             { "date": "2026/5/16 (六)", "type": "大愛", "names": ["彌勒仁行"], "role": "志工", "content": "" },
             { "date": "2026/5/17 (日)", "type": "大愛", "names": ["彌勒靜羽"], "role": "志工", "content": "彌勒一貫道講座＋慶生會" },
@@ -142,7 +142,7 @@
             { "date": "2026/6/7 (日)", "type": "大愛", "names": ["彌勒旻賢"], "role": "志工", "content": "禮佛日" },
             { "date": "2026/6/13 (六)", "type": "大愛", "names": ["彌勒行慈"], "role": "志工", "content": "" },
             { "date": "2026/6/14 (日)", "type": "大愛", "names": ["彌勒澄明"], "role": "志工", "content": "彌勒一貫道講座＋慶生會" },
-            { "date": "2026/6/19 (五)", "type": "大愛", "names": ["彌德元"], "role": "志工", "content": "端午節" },
+            { "date": "2026/6/19 (五)", "type": "大愛", "names": ["彌勒德元"], "role": "志工", "content": "端午節" },
             { "date": "2026/6/20 (六)", "type": "大愛", "names": ["彌勒仁行"], "role": "志工", "content": "" },
             { "date": "2026/6/21 (日)", "type": "大愛", "names": ["彌勒靜羽"], "role": "志工", "content": "捐血" },
             { "date": "2026/6/27 (六)", "type": "大愛", "names": ["彌勒知行"], "role": "志工", "content": "" },
@@ -152,7 +152,7 @@
             { "date": "2026/7/11 (六)", "type": "大愛", "names": ["彌勒聞元"], "role": "志工", "content": "" },
             { "date": "2026/7/12 (日)", "type": "大愛", "names": ["彌勒靜羽"], "role": "志工", "content": "" },
             { "date": "2026/7/18 (六)", "type": "大愛", "names": ["彌勒易決"], "role": "志工", "content": "" },
-            { "date": "2026/7/19 (日)", "type": "大愛", "names": ["彌德元"], "role": "志工", "content": "彌勒一貫道講座＋慶生會" },
+            { "date": "2026/7/19 (日)", "type": "大愛", "names": ["彌勒德元"], "role": "志工", "content": "彌勒一貫道講座＋慶生會" },
             { "date": "2026/7/25 (六)", "type": "大愛", "names": ["彌勒行慈"], "role": "志工", "content": "" },
             { "date": "2026/7/26 (日)", "type": "大愛", "names": ["彌勒仁行"], "role": "志工", "content": "" },
             { "date": "2026/8/1 (六)", "type": "大愛", "names": ["彌勒知行"], "role": "志工", "content": "皇母出家法會" },
@@ -163,7 +163,7 @@
             { "date": "2026/8/16 (日)", "type": "大愛", "names": ["彌勒靜羽"], "role": "志工", "content": "彌勒一貫道講座＋慶生會" },
             { "date": "2026/8/22 (六)", "type": "大愛", "names": ["彌勒決立"], "role": "志工", "content": "台北佛展(8/21 - 8/24)" },
             { "date": "2026/8/23 (日)", "type": "大愛", "names": ["彌勒易決"], "role": "志工", "content": "台北佛展(8/21 - 8/24)" },
-            { "date": "2026/8/29 (六)", "type": "大愛", "names": ["彌德元"], "role": "志工", "content": "" },
+            { "date": "2026/8/29 (六)", "type": "大愛", "names": ["彌勒德元"], "role": "志工", "content": "" },
             { "date": "2026/8/30 (日)", "type": "大愛", "names": ["彌勒行慈"], "role": "志工", "content": "中元普渡祈福法會 農曆7月18日" },
             { "date": "2026/9/5 (六)", "type": "大愛", "names": ["彌勒信永"], "role": "志工", "content": "" },
             { "date": "2026/9/6 (日)", "type": "大愛", "names": ["彌勒知行"], "role": "志工", "content": "禮佛日" },
@@ -171,7 +171,7 @@
             { "date": "2026/9/13 (日)", "type": "大愛", "names": ["彌勒旻賢"], "role": "志工", "content": "" },
             { "date": "2026/9/19 (六)", "type": "大愛", "names": ["彌勒尼恒"], "role": "志工", "content": "" },
             { "date": "2026/9/20 (日)", "type": "大愛", "names": ["彌勒決立"], "role": "志工", "content": "" },
-            { "date": "2026/9/25 (五)", "type": "大愛", "names": ["彌德元"], "role": "志工", "content": "中秋節" },
+            { "date": "2026/9/25 (五)", "type": "大愛", "names": ["彌勒德元"], "role": "志工", "content": "中秋節" },
             { "date": "2026/9/26 (六)", "type": "大愛", "names": ["彌勒易決"], "role": "志工", "content": "" },
             { "date": "2026/9/27 (日)", "type": "大愛", "names": ["彌勒靜羽"], "role": "志工", "content": "彌勒一貫道講座＋慶生會+捐血" },
             { "date": "2026/9/28 (一)", "type": "大愛", "names": ["彌勒行慈"], "role": "志工", "content": "教師節" },
@@ -183,7 +183,7 @@
             { "date": "2026/10/17 (六)", "type": "大愛", "names": ["彌勒決立"], "role": "志工", "content": "媽祖天后成道日法會" },
             { "date": "2026/10/18 (日)", "type": "大愛", "names": ["彌勒靜羽"], "role": "志工", "content": "捐血" },
             { "date": "2026/10/24 (六)", "type": "大愛", "names": ["彌勒易決"], "role": "志工", "content": "" },
-            { "date": "2026/10/25 (日)", "type": "大愛", "names": ["彌德元"], "role": "志工", "content": "彌勒一貫道講座＋慶生會" },
+            { "date": "2026/10/25 (日)", "type": "大愛", "names": ["彌勒德元"], "role": "志工", "content": "彌勒一貫道講座＋慶生會" },
             { "date": "2026/10/26 (一)", "type": "大愛", "names": ["彌勒行慈"], "role": "志工", "content": "列假日補假 (光復節)" },
             { "date": "2026/10/31 (六)", "type": "大愛", "names": ["彌勒知行"], "role": "志工", "content": "皇母成道日法會" },
             { "date": "2026/11/1 (日)", "type": "大愛", "names": ["彌勒敬合"], "role": "志工", "content": "皇母成道日法會 禮佛日 農曆9月23日" },
@@ -193,7 +193,7 @@
             { "date": "2026/11/15 (日)", "type": "大愛", "names": ["彌勒決立"], "role": "志工", "content": "彌勒一貫道講座＋慶生會" },
             { "date": "2026/11/21 (六)", "type": "大愛", "names": ["彌勒尼恒"], "role": "志工", "content": "" },
             { "date": "2026/11/22 (日)", "type": "大愛", "names": ["彌勒靜羽"], "role": "志工", "content": "捐血" },
-            { "date": "2026/11/28 (六)", "type": "大愛", "names": ["彌德元"], "role": "志工", "content": "" },
+            { "date": "2026/11/28 (六)", "type": "大愛", "names": ["彌勒德元"], "role": "志工", "content": "" },
             { "date": "2026/11/29 (日)", "type": "大愛", "names": ["彌勒行慈"], "role": "志工", "content": "" },
             { "date": "2026/12/5 (六)", "type": "大愛", "names": ["彌勒知行"], "role": "志工", "content": "" },
             { "date": "2026/12/6 (日)", "type": "大愛", "names": ["彌勒敬合"], "role": "志工", "content": "禮佛日" },
@@ -203,7 +203,7 @@
             { "date": "2026/12/20 (日)", "type": "大愛", "names": ["彌勒靜羽"], "role": "志工", "content": "" },
             { "date": "2026/12/25 (五)", "type": "大愛", "names": ["彌勒決立"], "role": "志工", "content": "列假日補假 (行憲紀念日)" },
             { "date": "2026/12/26 (六)", "type": "大愛", "names": ["彌勒易決"], "role": "志工", "content": "" },
-            { "date": "2026/12/27 (日)", "type": "大愛", "names": ["彌德元"], "role": "志工", "content": "嚴聖尊佛成道日法會 農曆11月19日" },
+            { "date": "2026/12/27 (日)", "type": "大愛", "names": ["彌勒德元"], "role": "志工", "content": "嚴聖尊佛成道日法會 農曆11月19日" },
 
             // --- 大佛手 ---
             { "date": "2026/1/1 (四)", "type": "大佛手", "names": ["彌勒故明", "彌勒敬合", "彌勒塵耀"], "role": "志工", "content": "115年元旦" },
@@ -434,7 +434,7 @@
             { "date": "2026/12/20 (日)", "type": "北部頌缽", "names": ["彌勒立能", "彌勒勝棋", "彌勒智方", "彌勒提智", "彌勒行慈"], "role": "志工", "content": "A-3組" }
         ];
 
-        // --- 元件：法會日期彈窗 (Modal) ---
+        // --- 法會日期彈窗 (Modal) ---
         const DharmaModal = ({ isOpen, onClose, data, isLoading, error }) => {
             if (!isOpen) return null;
 
@@ -507,7 +507,7 @@
                         
                         {/* Modal Footer */}
                         <div className="bg-slate-50 border-t border-slate-200 p-4 shrink-0 text-center text-xs text-slate-400 flex justify-between items-center">
-                             <span>資料來源: {error ? '內建備份' : '2026DharmaServiceDate.json'}</span>
+                             <span>資料來源: {error ? '內建備份' : 'Embedded Data'}</span>
                              <button 
                                 onClick={onClose}
                                 className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-1.5 rounded shadow-sm transition-colors"
@@ -528,14 +528,6 @@
             useEffect(() => {
                 if (!searchTerm) return;
                 
-                // 嘗試解析日期 (格式: 2026/2, 2/15)
-                // 優先匹配 "YYYY/M" 或 "M/D"
-                // 正則解釋: 
-                // ^(202\d)?[/\-\.]?(\d{1,2})([/\-\.](\d{1,2})?)?
-                // Group 1: 年份 (可選)
-                // Group 2: 月份 (必須)
-                
-                // 簡單判斷：如果輸入的是數字開頭
                 if (/^\d/.test(searchTerm)) {
                     const parts = searchTerm.split(/[\/\-\.]/);
                     let year = 2026;
@@ -545,16 +537,13 @@
                          const p1 = parseInt(parts[0], 10);
                          
                          if (parts.length === 1) {
-                             // 輸入單一數字，可能是月份 (1-12)
                              if (p1 >= 1 && p1 <= 12) month = p1;
                          } else {
                              const p2 = parseInt(parts[1], 10);
                              if (p1 > 1000) {
-                                 // 格式：2026/2
                                  year = p1;
                                  if (p2 >= 1 && p2 <= 12) month = p2;
                              } else {
-                                 // 格式：2/15 -> 視為 2月
                                  if (p1 >= 1 && p1 <= 12) month = p1;
                              }
                          }
@@ -590,7 +579,7 @@
                 for (let day = 1; day <= daysInMonth; day++) {
                     const dateKey = `${currentDate.getFullYear()}/${String(currentDate.getMonth() + 1).padStart(2, '0')}/${String(day).padStart(2, '0')}`;
                     const hasEvent = eventDates.has(dateKey);
-                    const dharmaInfo = dharmaDatesMap.get(dateKey); // 取得法會物件
+                    const dharmaInfo = dharmaDatesMap.get(dateKey);
                     const hasDharma = !!dharmaInfo;
                     
                     const dayOfWeek = (firstDay + day - 1) % 7;
@@ -610,13 +599,11 @@
                                 >
                                     {day}
                                 </span>
-                                {/* 法會標記 (紫點) */}
                                 {hasDharma && (
                                     <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" title={dharmaInfo.title}></span>
                                 )}
                             </div>
                             
-                            {/* 事件內容預覽 */}
                             <div className="flex flex-col gap-0.5 w-full">
                                 {hasDharma && (
                                     <div className="flex flex-col">
@@ -671,7 +658,6 @@
                         {renderDays()}
                     </div>
                     
-                    {/* 圖例說明 */}
                     <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex gap-4 text-xs text-slate-500 justify-end">
                         <div className="flex items-center gap-1">
                             <span className="w-2 h-2 rounded-full bg-purple-500"></span> 法會日期
@@ -695,13 +681,11 @@
             const [isDataLoaded, setIsDataLoaded] = useState(false);
             const [viewMode, setViewMode] = useState('list');
 
-            // 法會日期相關狀態
             const [dharmaData, setDharmaData] = useState([]);
             const [isDharmaLoading, setIsDharmaLoading] = useState(false);
             const [dharmaError, setDharmaError] = useState(null);
             const [isDharmaModalOpen, setIsDharmaModalOpen] = useState(false);
 
-            // 讀取排班資料
             useEffect(() => {
                 const loadExternalData = async () => {
                     try {
@@ -732,7 +716,6 @@
                 loadExternalData();
             }, []);
 
-            // 讀取法會日期資料
             useEffect(() => {
                 const loadDharmaData = async () => {
                     setIsDharmaLoading(true);
@@ -760,25 +743,20 @@
                 loadDharmaData();
             }, []);
             
-            // 建立法會日期 Map (供月曆快速查找)
             const dharmaDatesMap = useMemo(() => {
                 const map = new Map();
                 dharmaData.forEach(item => {
-                    // map key: YYYY/MM/DD
-                    // map value: 全物件 {title, location, date}
                     map.set(item.date, item);
                 });
                 return map;
             }, [dharmaData]);
 
-            // 檢查 SheetJS 是否載入
             useEffect(() => {
                 if (window.XLSX) {
                     setIsXlsxReady(true);
                 }
             }, []);
 
-            // 資料處理邏輯
             const flattenedData = useMemo(() => {
                 return rawData.flatMap(entry => {
                     const displayDate = ensureYearInString(entry.date);
@@ -815,7 +793,6 @@
                 setSearchTerm(dateStr);
             };
 
-            // 搜尋邏輯
             useEffect(() => {
                 let filtered = flattenedData;
                 
@@ -879,7 +856,6 @@
             return (
                 <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col">
 
-                    {/* 法會日期 Modal */}
                     <DharmaModal 
                         isOpen={isDharmaModalOpen} 
                         onClose={() => setIsDharmaModalOpen(false)} 
@@ -923,11 +899,9 @@
                             </div>
                         </div>
 
-                        {/* Search Controls */}
                         <div className="bg-white rounded-xl shadow-md p-6 mb-8 border border-slate-200">
                             <div className="flex flex-col gap-4">
                                 
-                                {/* View Mode Toggle */}
                                 <div className="flex justify-between border-b border-slate-100 pb-4">
                                     <button 
                                         onClick={() => setIsDharmaModalOpen(true)}
@@ -959,7 +933,6 @@
                                    </div>
                                 </div>
 
-                                {/* Top Row: Unit Filter & Search Input */}
                                 <div className="flex flex-col sm:flex-row gap-4">
                                    <div className="relative min-w-[160px] flex-1 sm:flex-none">
                                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -979,7 +952,6 @@
                                       </div>
                                    </div>
 
-                                   {/* Unified Input Field */}
                                    <div className="relative group w-full flex-1">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                       <Icon name="Search" className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
@@ -988,7 +960,7 @@
                                       type="text"
                                       value={searchTerm}
                                       onChange={(e) => setSearchTerm(e.target.value)}
-                                      placeholder="查姓名或日期 (例如: 彌勒澄明 或 2026/01/01)..."
+                                      placeholder="查姓名或日期 (例如: 彌勒澄明 或 2026/1/1)..."
                                       className="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm"
                                     />
                                   </div>
@@ -996,7 +968,6 @@
                             </div>
                         </div>
 
-                        {/* Content Area */}
                         {viewMode === 'calendar' && (
                           <div className="mb-6">
                             <CalendarView 
@@ -1008,7 +979,6 @@
                           </div>
                         )}
                         
-                        {/* Results Area */}
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
                             <h2 className="text-xl font-semibold text-slate-700 flex items-center gap-2">
