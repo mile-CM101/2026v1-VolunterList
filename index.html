@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>志工排班查詢系統 2026 (Calendar V3.9 Fixed)</title>
+    <title>志工排班查詢系統 2026 (Calendar V4.0 Secure)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -41,6 +41,13 @@
         .animate-fade-in-down {
             animation: fadeInDown 0.3s ease-out forwards;
         }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
     </style>
 </head>
 <body class="bg-slate-50">
@@ -58,22 +65,17 @@
             return <IconComponent className={className} {...props} />;
         };
 
-        const APP_VERSION = "App v3.9.0 (Fix: Dharma Data Sync)"; 
+        const APP_VERSION = "App v4.0.0 (Secure Login & UI Polish)"; 
         const DEFAULT_DATA_VERSION = "Data 2026 (Embedded)";
 
         // --- 輔助函式 ---
         const normalizeDate = (dateStr) => {
             if (!dateStr) return "";
-            // 將 2026/2/17 或 2/17 (二) 統一轉為 2026/02/17 以便比對
-            
-            // 處理已經是 YYYY/MM/DD 格式的情況
             if (dateStr.match(/^\d{4}\/\d{1,2}\/\d{1,2}/)) {
                 const cleanDate = dateStr.split(' ')[0];
                 const parts = cleanDate.split('/');
                 return `${parts[0]}/${parts[1].padStart(2, '0')}/${parts[2].padStart(2, '0')}`;
             }
-            
-            // 處理 M/D (週X) 或 M/D 格式，自動補上 2026
             const match = dateStr.match(/(\d{1,2})\/(\d{1,2})/);
             if (match) {
                 return `2026/${match[1].padStart(2, '0')}/${match[2].padStart(2, '0')}`;
@@ -361,6 +363,12 @@
 
         // --- 主應用程式 ---
         const App = () => {
+            // -- Auth State --
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [passwordInput, setPasswordInput] = useState('');
+            const [authError, setAuthError] = useState('');
+
+            // -- Data State --
             const [rawData, setRawData] = useState([]); 
             const [dataVersion, setDataVersion] = useState("讀取中...");
             const [searchTerm, setSearchTerm] = useState('');
@@ -374,6 +382,18 @@
             const [isDharmaLoading, setIsDharmaLoading] = useState(false);
             const [dharmaError, setDharmaError] = useState(null);
             const [isDharmaModalOpen, setIsDharmaModalOpen] = useState(false);
+
+            // 登入驗證
+            const handleLogin = (e) => {
+                e.preventDefault();
+                if (passwordInput === '25613858') {
+                    setIsAuthenticated(true);
+                    setAuthError('');
+                } else {
+                    setAuthError('密碼錯誤，請重新輸入');
+                    setPasswordInput('');
+                }
+            };
 
             useEffect(() => {
                 const loadExternalData = async () => {
@@ -402,8 +422,11 @@
                     }
                 };
 
-                loadExternalData();
-            }, []);
+                // 只有在登入後才讀取資料
+                if (isAuthenticated) {
+                    loadExternalData();
+                }
+            }, [isAuthenticated]);
 
             useEffect(() => {
                 const loadDharmaData = async () => {
@@ -429,14 +452,14 @@
                         setIsDharmaLoading(false);
                     }
                 };
-                loadDharmaData();
-            }, []);
+                if (isAuthenticated) {
+                    loadDharmaData();
+                }
+            }, [isAuthenticated]);
             
             const dharmaDatesMap = useMemo(() => {
                 const map = new Map();
                 dharmaData.forEach(item => {
-                    // 重要修正：強制標準化外部資料的日期格式 (例如 2/17 (二) -> 2026/02/17)
-                    // 這樣才能跟 CalendarView 的 key (2026/02/17) 對上
                     const normalizedKey = normalizeDate(item.date);
                     if (normalizedKey) {
                         map.set(normalizedKey, item);
@@ -485,7 +508,6 @@
 
             const handleCalendarDateClick = (dateStr) => {
                 setSearchTerm(dateStr);
-                // 如果在月曆模式下點擊，可以考慮滾動到結果區，但目前保持原位即可
             };
 
             useEffect(() => {
@@ -512,12 +534,9 @@
                 setResults(filtered);
             }, [searchTerm, searchUnit, flattenedData]);
 
-            // 計算當前搜尋日期是否有對應的法會 (互動連動邏輯)
             const currentDharma = useMemo(() => {
                 if (!searchTerm) return null;
-                // 嘗試將 searchTerm 標準化為 2026/MM/DD 格式
                 const normTerm = normalizeDate(searchTerm);
-                // 因為 dharmaDatesMap 的 key 已經被我們強制標準化了，所以這裡也必須用標準化後的 term 來查
                 return dharmaDatesMap.get(normTerm);
             }, [searchTerm, dharmaDatesMap]);
 
@@ -557,8 +576,60 @@
                 window.XLSX.writeFile(wb, `schedule_export.xlsx`);
             };
 
+            // 1. 如果未登入，顯示登入遮罩
+            if (!isAuthenticated) {
+                return (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 overflow-hidden">
+                        {/* 背景圖片層：使用上傳的圖片，透明度 30 (opacity-30) */}
+                        <div 
+                            className="absolute inset-0 z-0 bg-cover bg-center opacity-30 blur-[2px] scale-105"
+                            style={{ backgroundImage: "url('./Screenshot 2026-02-05 005633.jpg')" }}
+                        ></div>
+                        
+                        {/* 登入卡片 */}
+                        <div className="relative z-10 bg-white/95 p-8 rounded-2xl shadow-2xl w-full max-w-sm backdrop-blur-md border border-white/20 animate-fade-in-down mx-4">
+                            <div className="flex flex-col items-center mb-6">
+                                <div className="bg-emerald-100 p-3 rounded-full mb-4">
+                                    <Icon name="Lock" className="w-8 h-8 text-emerald-600" />
+                                </div>
+                                <h2 className="text-2xl font-bold text-slate-800">系統鎖定</h2>
+                                <p className="text-slate-500 text-sm mt-1">請輸入密碼以存取志工排班資料</p>
+                            </div>
+                            
+                            <form onSubmit={handleLogin} className="space-y-4">
+                                <div>
+                                    <input 
+                                        type="password" 
+                                        value={passwordInput}
+                                        onChange={(e) => setPasswordInput(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-center text-lg tracking-widest placeholder-slate-400 transition-all shadow-inner bg-slate-50"
+                                        placeholder="輸入密碼"
+                                        autoFocus
+                                    />
+                                </div>
+                                {authError && (
+                                    <div className="text-red-500 text-sm text-center font-medium bg-red-50 py-1 rounded animate-pulse">
+                                        {authError}
+                                    </div>
+                                )}
+                                <button 
+                                    type="submit"
+                                    className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"
+                                >
+                                    解鎖進入
+                                </button>
+                            </form>
+                            <div className="mt-6 text-center text-xs text-slate-400">
+                                © 2026 彌勒一貫道 淨土解脫
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // 2. 已登入，顯示主介面
             return (
-                <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col">
+                <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col animate-fade-in">
 
                     <DharmaModal 
                         isOpen={isDharmaModalOpen} 
@@ -588,6 +659,13 @@
                                         </div>
                                     </div>
                                 </div>
+                                <button 
+                                    onClick={() => { setIsAuthenticated(false); setPasswordInput(''); }}
+                                    className="self-end md:self-auto bg-emerald-800/50 hover:bg-emerald-800 text-emerald-100 px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-1.5"
+                                >
+                                    <Icon name="LogOut" className="w-4 h-4" />
+                                    鎖定
+                                </button>
                             </div>
                         </div>
                     </header>
@@ -665,8 +743,18 @@
                                       value={searchTerm}
                                       onChange={(e) => setSearchTerm(e.target.value)}
                                       placeholder="查姓名或日期 (例如: 彌勒澄明 或 2026/1/1)..."
-                                      className="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm"
+                                      className="block w-full pl-10 pr-10 py-3 border border-slate-300 rounded-lg leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm"
                                     />
+                                    {/* 新增：清除按鈕 */}
+                                    {searchTerm && (
+                                        <button 
+                                            onClick={() => setSearchTerm('')}
+                                            className="absolute inset-y-0 right-0 px-3 flex items-center text-slate-400 hover:text-red-500 transition-colors"
+                                            title="清除搜尋"
+                                        >
+                                            <Icon name="XCircle" className="w-5 h-5 fill-slate-100" />
+                                        </button>
+                                    )}
                                   </div>
                                 </div>
                             </div>
