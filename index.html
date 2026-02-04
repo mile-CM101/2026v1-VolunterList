@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>志工排班查詢系統 2026 (Calendar V3 UI)</title>
+    <title>志工排班查詢系統 2026 (Calendar V3.8 Interactive)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -28,6 +28,19 @@
           -ms-overflow-style: none;  /* IE and Edge */
           scrollbar-width: none;  /* Firefox */
         }
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-fade-in-down {
+            animation: fadeInDown 0.3s ease-out forwards;
+        }
     </style>
 </head>
 <body class="bg-slate-50">
@@ -45,12 +58,13 @@
             return <IconComponent className={className} {...props} />;
         };
 
-        const APP_VERSION = "App v3.7.0 (UI Enhanced)"; 
+        const APP_VERSION = "App v3.8.0 (Interactive Info)"; 
         const DEFAULT_DATA_VERSION = "Data 2026 (Embedded)";
 
         // --- 輔助函式 ---
         const normalizeDate = (dateStr) => {
             if (!dateStr) return "";
+            // 將 2026/2/17 轉為 2026/02/17 以便比對
             if (dateStr.match(/^\d{4}\/\d{1,2}\/\d{1,2}/)) {
                 const cleanDate = dateStr.split(' ')[0];
                 const parts = cleanDate.split('/');
@@ -334,7 +348,7 @@
                              <span className="w-2 h-2 rounded-full bg-emerald-500"></span> 志工排班
                         </div>
                         <div className="flex items-center gap-1">
-                             <span className="w-2 h-2 rounded-full bg-purple-500"></span> 法會日期
+                             <span className="w-2 h-2 rounded-full bg-purple-500"></span> 法會  {/* 修改處 1: 法會日期 -> 法會 */}
                         </div>
                     </div>
                 </div>
@@ -488,6 +502,15 @@
                 filtered.sort((a, b) => a.date.localeCompare(b.date));
                 setResults(filtered);
             }, [searchTerm, searchUnit, flattenedData]);
+
+            // 修改處 2: 計算當前搜尋日期是否有對應的法會 (互動連動邏輯)
+            const currentDharma = useMemo(() => {
+                if (!searchTerm) return null;
+                // 嘗試將 searchTerm 標準化為 2026/MM/DD 格式
+                const normTerm = normalizeDate(searchTerm);
+                // 嘗試直接比對或標準化後比對
+                return dharmaDatesMap.get(searchTerm) || dharmaDatesMap.get(normTerm);
+            }, [searchTerm, dharmaDatesMap]);
 
             const handleExportTxt = () => {
                 if (results.length === 0) return;
@@ -680,6 +703,27 @@
                               </div>
                             )}
                           </div>
+
+                          {/* 修改處 3: 顯示法會資訊卡片 (當前選擇的日期若有法會) */}
+                          {currentDharma && (
+                            <div className="mb-2 bg-purple-50 border border-purple-200 rounded-xl p-4 flex items-start gap-4 shadow-sm animate-fade-in-down">
+                                <div className="bg-purple-100 p-2.5 rounded-full shrink-0">
+                                    <Icon name="Sparkles" className="w-6 h-6 text-purple-600 fill-current" />
+                                </div>
+                                <div className="flex-grow">
+                                    <h3 className="font-bold text-purple-900 text-lg flex items-center gap-2">
+                                        {currentDharma.title}
+                                    </h3>
+                                    <div className="flex items-center gap-2 text-purple-700 mt-1 font-medium">
+                                        <Icon name="Calendar" className="w-4 h-4" />
+                                        <span>{currentDharma.date}</span>
+                                        <span className="text-purple-300 mx-1">|</span>
+                                        <Icon name="MapPin" className="w-4 h-4" />
+                                        <span>{currentDharma.location}</span>
+                                    </div>
+                                </div>
+                            </div>
+                          )}
 
                           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-h-[300px]">
                             {!isDataLoaded ? (
