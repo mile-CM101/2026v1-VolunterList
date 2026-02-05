@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>志工排班查詢系統 2026 (Calendar V4.3)</title>
+    <title>志工排班查詢系統 2026 (Calendar V4.4)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -65,7 +65,7 @@
             return <IconComponent className={className} {...props} />;
         };
 
-        const APP_VERSION = "App v4.3.0 (Consistent BG)"; 
+        const APP_VERSION = "App v4.4.0 (BG Opacity 30)"; 
         const DEFAULT_DATA_VERSION = "Data 2026 (Embedded)";
 
         // --- 輔助函式 ---
@@ -368,7 +368,7 @@
             const [passwordInput, setPasswordInput] = useState('');
             const [authError, setAuthError] = useState('');
 
-            // 安全性: 將正確密碼 "25613858" 轉為 Base64 亂碼 "MjU2MTM4NTg="
+           
             // 這樣在原始碼中就看不到明文密碼，避免直接被搜尋到
             const TARGET_HASH = "MjU2MTM4NTg=";
 
@@ -591,9 +591,9 @@
             if (!isAuthenticated) {
                 return (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 overflow-hidden">
-                        {/* 登入畫面背景: bk.jpg, opacity-20 */}
+                        {/* 登入畫面背景: bk.jpg, opacity-30 (已修改) */}
                         <div 
-                            className="absolute inset-0 z-0 bg-cover bg-center opacity-20 blur-[2px] scale-105"
+                            className="absolute inset-0 z-0 bg-cover bg-center opacity-30 blur-[2px] scale-105"
                             style={{ backgroundImage: "url('./bk.jpg')" }}
                         ></div>
                         
@@ -631,7 +631,7 @@
                                 </button>
                             </form>
                             <div className="mt-6 text-center text-xs text-slate-400">
-                                © 2026 彌勒一貫道 願彌勒與你同在
+                                © 2026 彌勒一貫道 淨土解脫
                             </div>
                         </div>
                     </div>
@@ -643,9 +643,9 @@
                 // 移除 bg-slate-50，改用透明或預設背景，以便顯示下層的圖片
                 <div className="min-h-screen font-sans text-slate-800 flex flex-col animate-fade-in relative">
                     
-                    {/* 主介面背景層: bk.jpg, opacity-20 */}
+                    {/* 主介面背景層: bk.jpg, opacity-30 (已修改) */}
                     <div 
-                        className="fixed inset-0 z-[-1] bg-cover bg-center opacity-20 pointer-events-none"
+                        className="fixed inset-0 z-[-1] bg-cover bg-center opacity-30 pointer-events-none"
                         style={{ backgroundImage: "url('./bk.jpg')" }}
                     ></div>
 
@@ -760,7 +760,7 @@
                                       type="text"
                                       value={searchTerm}
                                       onChange={(e) => setSearchTerm(e.target.value)}
-                                      placeholder="姓名/日期(彌勒澄明 or 2026/1/1)"
+                                      placeholder="查姓名或日期 (例如: 彌勒澄明 或 2026/1/1)..."
                                       className="block w-full pl-10 pr-10 py-3 border border-slate-300 rounded-lg leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm"
                                     />
                                     {/* 新增：清除按鈕 */}
