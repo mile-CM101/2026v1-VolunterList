@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>志工排班查詢系統 2026 (Calendar V4.1 Secure)</title>
+    <title>志工排班查詢系統 2026 (Calendar V4.2)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -65,7 +65,7 @@
             return <IconComponent className={className} {...props} />;
         };
 
-        const APP_VERSION = "App v4.1.0 (Hash Login & Custom BG)"; 
+        const APP_VERSION = "App v4.2.0 (Default Calendar & BG Fix)"; 
         const DEFAULT_DATA_VERSION = "Data 2026 (Embedded)";
 
         // --- 輔助函式 ---
@@ -96,7 +96,7 @@
         const EMBEDDED_DHARMA_DATA = [
             { "date": "2026/01/11", "title": "嚴聖尊佛成道日法會", "location": "新竹 冥聖九華山大地藏王佛玄皇寺" },
             { "date": "2026/01/25", "title": "嚴仁尊佛成道日法會", "location": "新竹 冥聖九華山大地藏王佛玄皇寺" },
-            { "date": "2026/02/17", "title": "彌勒尊佛佛誕日法會", "location": "新竹 冥聖九華山大地藏王佛玄皇寺" },
+            { "date": "2026/02/17", "title": "彌勒尊佛佛誕日法會", "location": "新店 陀彌天山紫竹林寺" },
             { "date": "2026/03/07", "title": "皇母聖道日法會", "location": "新店 陀彌天山紫竹林寺" },
             { "date": "2026/03/08", "title": "皇母聖道日法會", "location": "新店 陀彌天山紫竹林寺" },
             { "date": "2026/03/28", "title": "皇母聖誕日法會", "location": "新店 陀彌天山紫竹林寺" },
@@ -111,7 +111,7 @@
             { "date": "2026/10/17", "title": "媽祖天后成道日法會", "location": "台南 彌勒三皇母寶殿九龍媽祖廟" },
             { "date": "2026/10/31", "title": "皇母成道日法會", "location": "新店 陀彌天山紫竹林寺" },
             { "date": "2026/11/01", "title": "皇母成道日法會", "location": "新店 陀彌天山紫竹林寺" },
-            { "date": "2026/12/27", "title": "嚴聖尊佛成道日法會", "location": "新竹 冥聖九華山大地藏王佛玄皇寺" }
+            { "date": "2026/12/27", "title": "嚴聖尊佛成道日法會", "location": "新店 陀彌天山紫竹林寺" }
         ];
 
         // --- 法會日期彈窗 (Modal) ---
@@ -380,7 +380,9 @@
             const [results, setResults] = useState([]);
             const [isXlsxReady, setIsXlsxReady] = useState(false);
             const [isDataLoaded, setIsDataLoaded] = useState(false);
-            const [viewMode, setViewMode] = useState('list');
+            
+            // 修改處 1: 預設顯示月曆模式
+            const [viewMode, setViewMode] = useState('calendar'); 
 
             const [dharmaData, setDharmaData] = useState([]);
             const [isDharmaLoading, setIsDharmaLoading] = useState(false);
@@ -589,10 +591,10 @@
             if (!isAuthenticated) {
                 return (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 overflow-hidden">
-                        {/* 背景圖片層：使用上傳的 Screenshot 2026-02-05 005633.jpg，透明度 30 (opacity-30) */}
+                        {/* 修改處 2: 背景圖片層 -> 改為讀取 ./bk.jpg，並設定 opacity-20 */}
                         <div 
-                            className="absolute inset-0 z-0 bg-cover bg-center opacity-30 blur-[2px] scale-105"
-                            style={{ backgroundImage: "url('./Screenshot 2026-02-05 005633.jpg')" }}
+                            className="absolute inset-0 z-0 bg-cover bg-center opacity-20 blur-[2px] scale-105"
+                            style={{ backgroundImage: "url('./bk.jpg')" }}
                         ></div>
                         
                         {/* 登入卡片 */}
