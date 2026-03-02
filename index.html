@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>志工排班查詢系統 2026 (Calendar V4.4)</title>
+    <title>志工排班查詢系統 2026 (Calendar V4.6)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -65,7 +65,7 @@
             return <IconComponent className={className} {...props} />;
         };
 
-        const APP_VERSION = "App v4.4.0 (BG Opacity 30)"; 
+        const APP_VERSION = "App v4.6.0 (Auto-Login & TXT Fix)"; 
         const DEFAULT_DATA_VERSION = "Data 2026 (Embedded)";
 
         // --- 輔助函式 ---
@@ -367,10 +367,11 @@
             const [isAuthenticated, setIsAuthenticated] = useState(false);
             const [passwordInput, setPasswordInput] = useState('');
             const [authError, setAuthError] = useState('');
+            const [rememberMe, setRememberMe] = useState(false); // 新增：記住密碼狀態
 
-           
-            // 這樣在原始碼中就看不到明文密碼，避免直接被搜尋到
+            // 安全性: 將正確密碼 "25613858" 轉為 Base64 亂碼 "MjU2MTM4NTg="
             const TARGET_HASH = "MjU2MTM4NTg=";
+            const AUTH_STORAGE_KEY = "volunteer_app_auth_2026"; // 儲存金鑰名稱
 
             // -- Data State --
             const [rawData, setRawData] = useState([]); 
@@ -381,7 +382,7 @@
             const [isXlsxReady, setIsXlsxReady] = useState(false);
             const [isDataLoaded, setIsDataLoaded] = useState(false);
             
-            // 修改處 1: 預設顯示月曆模式
+            // 預設顯示月曆模式
             const [viewMode, setViewMode] = useState('calendar'); 
 
             const [dharmaData, setDharmaData] = useState([]);
@@ -389,14 +390,25 @@
             const [dharmaError, setDharmaError] = useState(null);
             const [isDharmaModalOpen, setIsDharmaModalOpen] = useState(false);
 
-            // 登入驗證 (修改為比對 Hash)
+            // 初始化時檢查是否有記住的登入資訊
+            useEffect(() => {
+                const savedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
+                if (savedAuth === TARGET_HASH) {
+                    setIsAuthenticated(true);
+                }
+            }, []);
+
+            // 登入驗證 (加入記憶功能)
             const handleLogin = (e) => {
                 e.preventDefault();
-                // 使用 btoa() 將輸入轉為 Base64，再與 TARGET_HASH 比對
                 try {
                     if (btoa(passwordInput) === TARGET_HASH) {
                         setIsAuthenticated(true);
                         setAuthError('');
+                        // 如果有勾選記住密碼，存入 localStorage
+                        if (rememberMe) {
+                            localStorage.setItem(AUTH_STORAGE_KEY, TARGET_HASH);
+                        }
                     } else {
                         setAuthError('密碼錯誤，請重新輸入');
                         setPasswordInput('');
@@ -406,10 +418,16 @@
                 }
             };
 
+            // 登出/鎖定處理
+            const handleLogout = () => {
+                setIsAuthenticated(false);
+                setPasswordInput('');
+                localStorage.removeItem(AUTH_STORAGE_KEY); // 清除記憶的登入狀態
+            };
+
             useEffect(() => {
                 const loadExternalData = async () => {
                     try {
-                        console.log("開始讀取 RAWData.json...");
                         const response = await fetch(`./RAWData.json?t=${new Date().getTime()}`);
                         
                         if (!response.ok) {
@@ -417,7 +435,6 @@
                         }
                         
                         const jsonData = await response.json();
-                        console.log("成功讀取資料筆數:", jsonData.length);
 
                         if (Array.isArray(jsonData)) {
                             setRawData(jsonData);
@@ -444,14 +461,12 @@
                     setIsDharmaLoading(true);
                     setDharmaError(null);
                     try {
-                        console.log("嘗試從外部檔案讀取 2026DharmaServiceDate.json...");
                         const response = await fetch(`./2026DharmaServiceDate.json?t=${new Date().getTime()}`);
                         if (!response.ok) throw new Error(`Status: ${response.status}`);
                         const jsonData = await response.json();
                         
                         if (Array.isArray(jsonData)) {
                             setDharmaData(jsonData);
-                            console.log("成功讀取外部 2026DharmaServiceDate.json");
                         } else {
                             throw new Error("格式錯誤");
                         }
@@ -551,6 +566,7 @@
                 return dharmaDatesMap.get(normTerm);
             }, [searchTerm, dharmaDatesMap]);
 
+            // 修改處 1: 修正手機端匯出 TXT 亂碼的問題 (加入 \uFEFF BOM 字元)
             const handleExportTxt = () => {
                 if (results.length === 0) return;
                 let content = `排班表查詢結果 - 單位:${searchUnit} | 搜尋:${searchTerm || '(無)'}\n`;
@@ -560,7 +576,9 @@
                 results.forEach(item => {
                     content += `${item.rawDate}\t${item.type}\t${item.name}\t${item.role} ${item.content ? `(${item.content})` : ''}\n`;
                 });
-                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                
+                // 在內容最前面加上 '\uFEFF' (UTF-8 BOM)，能讓手機或記事本正確辨識為 UTF-8 編碼
+                const blob = new Blob(['\uFEFF' + content], { type: 'text/plain;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
@@ -591,15 +609,15 @@
             if (!isAuthenticated) {
                 return (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 overflow-hidden">
-                        {/* 登入畫面背景: bk.jpg, opacity-30 (已修改) */}
+                        {/* 登入畫面背景: bk.jpg, opacity-30 */}
                         <div 
                             className="absolute inset-0 z-0 bg-cover bg-center opacity-30 blur-[2px] scale-105"
-                            style={{ backgroundImage: "url('./images/bk.jpg')" }}
+                            style={{ backgroundImage: "url('./bk.jpg')" }}
                         ></div>
                         
                         {/* 登入卡片 */}
                         <div className="relative z-10 bg-white/95 p-8 rounded-2xl shadow-2xl w-full max-w-sm backdrop-blur-md border border-white/20 animate-fade-in-down mx-4">
-                            <div className="flex flex-col items-center mb-6">
+                            <div className="flex flex-col items-center mb-4">
                                 <div className="bg-emerald-100 p-3 rounded-full mb-4">
                                     <Icon name="Lock" className="w-8 h-8 text-emerald-600" />
                                 </div>
@@ -618,6 +636,21 @@
                                         autoFocus
                                     />
                                 </div>
+
+                                {/* 修改處 2: 加入「記住密碼」選項 */}
+                                <div className="flex items-center justify-center py-1">
+                                    <input 
+                                        type="checkbox" 
+                                        id="rememberMe" 
+                                        checked={rememberMe}
+                                        onChange={(e) => setRememberMe(e.target.checked)}
+                                        className="w-4 h-4 text-emerald-600 bg-slate-100 border-slate-300 rounded focus:ring-emerald-500 cursor-pointer"
+                                    />
+                                    <label htmlFor="rememberMe" className="ml-2 text-sm font-medium text-slate-600 cursor-pointer select-none">
+                                        記住密碼 (下次自動登入)
+                                    </label>
+                                </div>
+
                                 {authError && (
                                     <div className="text-red-500 text-sm text-center font-medium bg-red-50 py-1 rounded animate-pulse">
                                         {authError}
@@ -631,7 +664,7 @@
                                 </button>
                             </form>
                             <div className="mt-6 text-center text-xs text-slate-400">
-                                © 2026 彌勒一貫道 願迷勒與你同在
+                                © 2026 彌勒一貫道 淨土解脫
                             </div>
                         </div>
                     </div>
@@ -640,14 +673,16 @@
 
             // 2. 已登入，顯示主介面
             return (
-                // 移除 bg-slate-50，改用透明或預設背景，以便顯示下層的圖片
-                <div className="min-h-screen font-sans text-slate-800 flex flex-col animate-fade-in relative">
+                <div className="min-h-screen font-sans text-slate-800 flex flex-col animate-fade-in relative bg-slate-100">
                     
-                    {/* 主介面背景層: bk.jpg, opacity-30 (已修改) */}
+                    {/* 主介面背景層: bk.jpg, opacity-30 */}
                     <div 
-                        className="fixed inset-0 z-[-1] bg-cover bg-center opacity-30 pointer-events-none"
-                        style={{ backgroundImage: "url('./images/bk.jpg')" }}
+                        className="fixed inset-0 z-0 bg-cover bg-center opacity-30 pointer-events-none"
+                        style={{ backgroundImage: "url('./bk.jpg')" }}
                     ></div>
+
+                    {/* 確保內容層級高於背景 (z-10) */}
+                    <div className="relative z-10 flex flex-col min-h-screen">
 
                     <DharmaModal 
                         isOpen={isDharmaModalOpen} 
@@ -678,11 +713,11 @@
                                     </div>
                                 </div>
                                 <button 
-                                    onClick={() => { setIsAuthenticated(false); setPasswordInput(''); }}
+                                    onClick={handleLogout}
                                     className="self-end md:self-auto bg-emerald-800/50 hover:bg-emerald-800 text-emerald-100 px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-1.5"
                                 >
                                     <Icon name="LogOut" className="w-4 h-4" />
-                                    鎖定
+                                    鎖定 / 登出
                                 </button>
                             </div>
                         </div>
@@ -760,7 +795,7 @@
                                       type="text"
                                       value={searchTerm}
                                       onChange={(e) => setSearchTerm(e.target.value)}
-                                      placeholder="姓名/日期 (例:彌勒澄明或2026/1/1)"
+                                      placeholder="查姓名或日期 (例如: 彌勒澄明 或 2026/1/1)..."
                                       className="block w-full pl-10 pr-10 py-3 border border-slate-300 rounded-lg leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm"
                                     />
                                     {/* 新增：清除按鈕 */}
@@ -904,11 +939,12 @@
                           </div>
                         </div>
                     </footer>
+                    </div>
                 </div>
             );
         };
 
-        // 啟動 React
+        // 啟直 React
         const container = document.getElementById('root');
         const root = createRoot(container);
         root.render(<App />);
