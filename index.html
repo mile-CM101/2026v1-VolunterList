@@ -1,9 +1,24 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
+    <!-- 
+    ========================================================================
+    [系統版本更新歷程]
+    - V5.0 (目前版本) : 
+        1. 修正參與排班統計 (StatsModal) 中姓名因空間擠壓而斷行的問題 (加入 shrink-0 與 whitespace-nowrap)。
+    - V4.9 : 
+        1. 新增 parseAndCleanNames 函式，自動過濾結尾的「教練」、「助教」、「老師」等職稱，精準合併同一人的排班統計。
+        2. UI 提示文字補齊所有 10 個志工單位（含：道場功法、大正功法等）。
+    - V4.8 : 新增 RosterModal(排班名單)、StatsModal(參與排班統計) 與匯出 TXT 功能。
+    - V4.6 : 修復手機端 TXT 亂碼(加入 BOM)，新增 LocalStorage 記住密碼功能。
+    - V4.5 : 新增 bg-slate-100 作為背景圖失效時的備援。
+    - V4.3 : 全域統一背景圖設定 (bk.jpg)，設定透明度 30%。
+    - V4.1 : 實作 Base64 密碼防護閘道。
+    ========================================================================
+    -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>志工排班查詢系統 2026 (Calendar V4.6)</title>
+    <title>志工排班查詢系統 2026 (Calendar V5.0)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -48,6 +63,21 @@
         .animate-fade-in {
             animation: fadeIn 0.5s ease-out forwards;
         }
+        /* 自訂滾動條樣式，讓 Modal 內容滾動更美觀 */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
     </style>
 </head>
 <body class="bg-slate-50">
@@ -65,7 +95,7 @@
             return <IconComponent className={className} {...props} />;
         };
 
-        const APP_VERSION = "App v4.6.0 (Auto-Login & TXT Fix)"; 
+        const APP_VERSION = "App v5.0.0 (UI Polish)"; 
         const DEFAULT_DATA_VERSION = "Data 2026 (Embedded)";
 
         // --- 輔助函式 ---
@@ -92,6 +122,23 @@
             return str;
         };
 
+        // 清理姓名：過濾括號與特定職稱 (教練、助教、老師)
+        const parseAndCleanNames = (rawName) => {
+            if (!rawName || rawName === "待定") return [];
+            const parts = String(rawName).split(/[,\s]+/);
+            const res = [];
+            parts.forEach(p => {
+                let t = p.trim();
+                // 過濾空字串與括號開頭的註解 (如: (大正))
+                if (t && !t.startsWith('(') && !t.startsWith('（')) {
+                    // 過濾結尾的教練、助教、老師
+                    t = t.replace(/(教練|助教|老師)$/, '');
+                    if (t) res.push(t); // 確認清理後不是空字串才加入
+                }
+            });
+            return res;
+        };
+
         // --- 內建完整資料 (部署版專用) ---
         const EMBEDDED_DHARMA_DATA = [
             { "date": "2026/01/11", "title": "嚴聖尊佛成道日法會", "location": "新竹 冥聖九華山大地藏王佛玄皇寺" },
@@ -113,6 +160,237 @@
             { "date": "2026/11/01", "title": "皇母成道日法會", "location": "新店 陀彌天山紫竹林寺" },
             { "date": "2026/12/27", "title": "嚴聖尊佛成道日法會", "location": "新店 陀彌天山紫竹林寺" }
         ];
+
+        // --- 1. 排班名單彈窗 (Modal) ---
+        const RosterModal = ({ isOpen, onClose, data, searchUnit }) => {
+            if (!isOpen) return null;
+
+            // 計算目前選定單位的獨特人名，並加入過濾邏輯
+            const roster = useMemo(() => {
+                let filteredData = data;
+                if (searchUnit !== '所有單位') {
+                    filteredData = data.filter(item => item.type === searchUnit);
+                }
+                
+                const nameSet = new Set();
+                filteredData.forEach(item => {
+                    const cleanNames = parseAndCleanNames(item.name);
+                    cleanNames.forEach(n => nameSet.add(n));
+                });
+
+                return Array.from(nameSet).sort((a, b) => a.localeCompare(b, 'zh-TW'));
+            }, [data, searchUnit]);
+
+            // 匯出當前顯示的名單
+            const handleExportRoster = () => {
+                if (roster.length === 0) return;
+                const unitName = searchUnit === '所有單位' ? '全體' : searchUnit;
+                let content = `\uFEFF排班人員名單 - ${unitName} (${roster.length} 人)\n`;
+                content += `匯出時間: ${new Date().toLocaleString()}\n`;
+                content += `----------------------------------------------------------\n`;
+                roster.forEach((name, idx) => {
+                    content += `${idx + 1}. ${name}\n`;
+                });
+                
+                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `Roster_${unitName}.txt`;
+                link.click();
+                URL.revokeObjectURL(url);
+            };
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-all" onClick={onClose}>
+                    <div 
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out]"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="bg-indigo-600 px-6 py-4 flex justify-between items-center shrink-0">
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <Icon name="Users" className="w-5 h-5 text-indigo-100" />
+                                {searchUnit === '所有單位' ? '全體排班名單' : `${searchUnit} 排班名單`}
+                            </h3>
+                            <button 
+                                onClick={onClose}
+                                className="text-indigo-100 hover:text-white hover:bg-indigo-700/50 p-1.5 rounded-full transition-colors"
+                            >
+                                <Icon name="X" className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 overflow-y-auto custom-scrollbar flex-grow bg-slate-50">
+                            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200 text-slate-500 text-sm">
+                                <span>名單總計: <strong className="text-indigo-600">{roster.length}</strong> 人</span>
+                            </div>
+                            
+                            {roster.length === 0 ? (
+                                <div className="text-center text-slate-400 py-8">
+                                    此單位目前沒有排班人員資料
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    {roster.map((name, idx) => (
+                                        <div key={idx} className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-center text-slate-700 font-medium shadow-sm flex items-center justify-center gap-1.5 hover:border-indigo-300 transition-colors">
+                                            <Icon name="User" className="w-3.5 h-3.5 text-slate-400" />
+                                            <span className="truncate">{name}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="bg-slate-50 border-t border-slate-200 p-4 shrink-0 flex justify-end gap-3">
+                             <button 
+                                onClick={handleExportRoster}
+                                disabled={roster.length === 0}
+                                className="bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg shadow-sm transition-colors font-medium flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                             >
+                                <Icon name="Download" className="w-4 h-4" />
+                                輸出檔案
+                             </button>
+                             <button 
+                                onClick={onClose}
+                                className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-6 py-2 rounded-lg shadow-sm transition-colors font-medium"
+                             >
+                                關閉
+                             </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 2. 參與排班統計彈窗 (Modal) ---
+        const StatsModal = ({ isOpen, onClose, data }) => {
+            if (!isOpen) return null;
+
+            // 計算每個人參與了幾種不同的單位
+            const userStats = useMemo(() => {
+                const statsMap = new Map(); // key: 姓名, value: Set(參與過的單位)
+
+                data.forEach(item => {
+                    const cleanNames = parseAndCleanNames(item.name);
+                    cleanNames.forEach(n => {
+                        if (!statsMap.has(n)) {
+                            statsMap.set(n, new Set());
+                        }
+                        statsMap.get(n).add(item.type);
+                    });
+                });
+
+                // 將 Map 轉成陣列並排序 (先按參與單位數量降序，再按姓名筆畫)
+                const statsArray = Array.from(statsMap.entries()).map(([name, unitsSet]) => ({
+                    name: name,
+                    unitsCount: unitsSet.size,
+                    unitsList: Array.from(unitsSet).sort()
+                }));
+
+                statsArray.sort((a, b) => {
+                    if (b.unitsCount !== a.unitsCount) {
+                        return b.unitsCount - a.unitsCount; // 數量多的在前面
+                    }
+                    return a.name.localeCompare(b.name, 'zh-TW'); // 數量相同按姓名排序
+                });
+
+                return statsArray;
+            }, [data]);
+
+            const handleExportStats = () => {
+                if (userStats.length === 0) return;
+                let content = `\uFEFF參與排班統計名單 (${userStats.length} 人)\n`;
+                content += `匯出時間: ${new Date().toLocaleString()}\n`;
+                content += `----------------------------------------------------------\n`;
+                content += `姓名\t\t參與單位數\t\t參與單位明細\n`;
+                content += `----------------------------------------------------------\n`;
+                userStats.forEach((stat) => {
+                    content += `${stat.name}\t\t${stat.unitsCount}\t\t${stat.unitsList.join(', ')}\n`;
+                });
+                
+                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `Volunteer_Stats.txt`;
+                link.click();
+                URL.revokeObjectURL(url);
+            };
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-all" onClick={onClose}>
+                    <div 
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out]"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="bg-teal-600 px-6 py-4 flex justify-between items-center shrink-0">
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <Icon name="BarChart2" className="w-5 h-5 text-teal-100" />
+                                參與排班單位統計
+                            </h3>
+                            <button 
+                                onClick={onClose}
+                                className="text-teal-100 hover:text-white hover:bg-teal-700/50 p-1.5 rounded-full transition-colors"
+                            >
+                                <Icon name="X" className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 overflow-y-auto custom-scrollbar flex-grow bg-slate-50">
+                            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200 text-slate-500 text-sm">
+                                <span>總計參與志工: <strong className="text-teal-600">{userStats.length}</strong> 人</span>
+                                <span className="text-xs text-slate-400">依參與單位數量排序</span>
+                            </div>
+                            
+                            {userStats.length === 0 ? (
+                                <div className="text-center text-slate-400 py-8">
+                                    目前沒有排班資料
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {userStats.map((stat, idx) => (
+                                        <div key={idx} className="bg-white border border-slate-200 rounded-lg p-3 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:border-teal-300 transition-colors">
+                                            {/* 加入 shrink-0 確保左側姓名區塊不會被壓縮 */}
+                                            <div className="flex items-center gap-3 shrink-0">
+                                                <div className="bg-teal-50 w-8 h-8 rounded-full flex items-center justify-center text-teal-600 font-bold shrink-0">
+                                                    {stat.unitsCount}
+                                                </div>
+                                                {/* 加入 whitespace-nowrap 強制姓名不換行 */}
+                                                <span className="font-bold text-slate-700 text-lg whitespace-nowrap">{stat.name}</span>
+                                            </div>
+                                            <div className="flex flex-wrap gap-1.5 pl-11 sm:pl-0 sm:justify-end">
+                                                {stat.unitsList.map((unit, uIdx) => (
+                                                    <span key={uIdx} className="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded">
+                                                        {unit}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="bg-slate-50 border-t border-slate-200 p-4 shrink-0 flex justify-end gap-3">
+                             <button 
+                                onClick={handleExportStats}
+                                disabled={userStats.length === 0}
+                                className="bg-slate-100 border border-slate-300 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg shadow-sm transition-colors font-medium flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                             >
+                                <Icon name="Download" className="w-4 h-4" />
+                                輸出檔案
+                             </button>
+                             <button 
+                                onClick={onClose}
+                                className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-6 py-2 rounded-lg shadow-sm transition-colors font-medium"
+                             >
+                                關閉
+                             </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
 
         // --- 法會日期彈窗 (Modal) ---
         const DharmaModal = ({ isOpen, onClose, data, isLoading, error }) => {
@@ -367,11 +645,11 @@
             const [isAuthenticated, setIsAuthenticated] = useState(false);
             const [passwordInput, setPasswordInput] = useState('');
             const [authError, setAuthError] = useState('');
-            const [rememberMe, setRememberMe] = useState(false); // 新增：記住密碼狀態
+            const [rememberMe, setRememberMe] = useState(false);
 
             // 安全性: 將正確密碼 "25613858" 轉為 Base64 亂碼 "MjU2MTM4NTg="
             const TARGET_HASH = "MjU2MTM4NTg=";
-            const AUTH_STORAGE_KEY = "volunteer_app_auth_2026"; // 儲存金鑰名稱
+            const AUTH_STORAGE_KEY = "volunteer_app_auth_2026"; 
 
             // -- Data State --
             const [rawData, setRawData] = useState([]); 
@@ -382,13 +660,16 @@
             const [isXlsxReady, setIsXlsxReady] = useState(false);
             const [isDataLoaded, setIsDataLoaded] = useState(false);
             
-            // 預設顯示月曆模式
             const [viewMode, setViewMode] = useState('calendar'); 
 
             const [dharmaData, setDharmaData] = useState([]);
             const [isDharmaLoading, setIsDharmaLoading] = useState(false);
             const [dharmaError, setDharmaError] = useState(null);
+            
+            // Modal States
             const [isDharmaModalOpen, setIsDharmaModalOpen] = useState(false);
+            const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
+            const [isStatsModalOpen, setIsStatsModalOpen] = useState(false); 
 
             // 初始化時檢查是否有記住的登入資訊
             useEffect(() => {
@@ -398,14 +679,13 @@
                 }
             }, []);
 
-            // 登入驗證 (加入記憶功能)
+            // 登入驗證
             const handleLogin = (e) => {
                 e.preventDefault();
                 try {
                     if (btoa(passwordInput) === TARGET_HASH) {
                         setIsAuthenticated(true);
                         setAuthError('');
-                        // 如果有勾選記住密碼，存入 localStorage
                         if (rememberMe) {
                             localStorage.setItem(AUTH_STORAGE_KEY, TARGET_HASH);
                         }
@@ -422,7 +702,7 @@
             const handleLogout = () => {
                 setIsAuthenticated(false);
                 setPasswordInput('');
-                localStorage.removeItem(AUTH_STORAGE_KEY); // 清除記憶的登入狀態
+                localStorage.removeItem(AUTH_STORAGE_KEY); 
             };
 
             useEffect(() => {
@@ -450,7 +730,6 @@
                     }
                 };
 
-                // 只有在登入後才讀取資料
                 if (isAuthenticated) {
                     loadExternalData();
                 }
@@ -566,7 +845,6 @@
                 return dharmaDatesMap.get(normTerm);
             }, [searchTerm, dharmaDatesMap]);
 
-            // 修改處 1: 修正手機端匯出 TXT 亂碼的問題 (加入 \uFEFF BOM 字元)
             const handleExportTxt = () => {
                 if (results.length === 0) return;
                 let content = `排班表查詢結果 - 單位:${searchUnit} | 搜尋:${searchTerm || '(無)'}\n`;
@@ -577,7 +855,6 @@
                     content += `${item.rawDate}\t${item.type}\t${item.name}\t${item.role} ${item.content ? `(${item.content})` : ''}\n`;
                 });
                 
-                // 在內容最前面加上 '\uFEFF' (UTF-8 BOM)，能讓手機或記事本正確辨識為 UTF-8 編碼
                 const blob = new Blob(['\uFEFF' + content], { type: 'text/plain;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
@@ -605,17 +882,14 @@
                 window.XLSX.writeFile(wb, `schedule_export.xlsx`);
             };
 
-            // 1. 如果未登入，顯示登入遮罩
             if (!isAuthenticated) {
                 return (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 overflow-hidden">
-                        {/* 登入畫面背景: bk.jpg, opacity-30 */}
                         <div 
                             className="absolute inset-0 z-0 bg-cover bg-center opacity-30 blur-[2px] scale-105"
                             style={{ backgroundImage: "url('./bk.jpg')" }}
                         ></div>
                         
-                        {/* 登入卡片 */}
                         <div className="relative z-10 bg-white/95 p-8 rounded-2xl shadow-2xl w-full max-w-sm backdrop-blur-md border border-white/20 animate-fade-in-down mx-4">
                             <div className="flex flex-col items-center mb-4">
                                 <div className="bg-emerald-100 p-3 rounded-full mb-4">
@@ -637,7 +911,6 @@
                                     />
                                 </div>
 
-                                {/* 修改處 2: 加入「記住密碼」選項 */}
                                 <div className="flex items-center justify-center py-1">
                                     <input 
                                         type="checkbox" 
@@ -671,17 +944,14 @@
                 );
             }
 
-            // 2. 已登入，顯示主介面
             return (
                 <div className="min-h-screen font-sans text-slate-800 flex flex-col animate-fade-in relative bg-slate-100">
                     
-                    {/* 主介面背景層: bk.jpg, opacity-30 */}
                     <div 
                         className="fixed inset-0 z-0 bg-cover bg-center opacity-30 pointer-events-none"
                         style={{ backgroundImage: "url('./bk.jpg')" }}
                     ></div>
 
-                    {/* 確保內容層級高於背景 (z-10) */}
                     <div className="relative z-10 flex flex-col min-h-screen">
 
                     <DharmaModal 
@@ -690,6 +960,21 @@
                         data={dharmaData}
                         isLoading={isDharmaLoading}
                         error={dharmaError}
+                    />
+
+                    {/* 加入排班名單 Modal */}
+                    <RosterModal
+                        isOpen={isRosterModalOpen}
+                        onClose={() => setIsRosterModalOpen(false)}
+                        data={flattenedData}
+                        searchUnit={searchUnit}
+                    />
+
+                    {/* 加入參與排班統計 Modal */}
+                    <StatsModal
+                        isOpen={isStatsModalOpen}
+                        onClose={() => setIsStatsModalOpen(false)}
+                        data={flattenedData}
                     />
                 
                     <header className="bg-emerald-700 text-white shadow-lg shrink-0">
@@ -729,7 +1014,7 @@
                             <div>
                                 <p><strong>資料說明：</strong></p>
                                 <ul className="list-disc list-inside mt-1 space-y-1 text-blue-700">
-                                    <li><strong>志工排班包含下列志工：</strong> 大愛、大佛手、聖地輪值、道場功法、大正功法、護衛隊、讀書會、攝影座談會。</li>
+                                    <li><strong>志工排班包含下列志工：</strong> 大愛、大佛手、聖地輪值、道場功法、大正功法、護衛隊、讀書會、座談會攝影、週四功法研習、北部頌缽。</li>
                                 </ul>
                             </div>
                         </div>
@@ -737,7 +1022,7 @@
                         <div className="bg-white rounded-xl shadow-md p-6 mb-8 border border-slate-200">
                             <div className="flex flex-col gap-4">
                                 
-                                <div className="flex justify-between border-b border-slate-100 pb-4">
+                                <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                                     <button 
                                         onClick={() => setIsDharmaModalOpen(true)}
                                         className="group bg-amber-500 hover:bg-amber-400 text-white text-sm font-bold py-1.5 px-4 rounded-lg flex items-center gap-2 transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
@@ -746,26 +1031,47 @@
                                         法會日期
                                     </button>
                                     
-                                    <div className="flex bg-slate-100 p-1 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        
+                                        {/* 新增：參與排班 (統計) 按鈕，放在全體名單左邊 */}
                                         <button
-                                            onClick={() => setViewMode('list')}
-                                            className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                                                viewMode === 'list' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                                            }`}
+                                            onClick={() => setIsStatsModalOpen(true)}
+                                            className="hidden sm:flex text-teal-600 hover:text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-3 py-1.5 rounded-lg text-sm font-bold items-center gap-1.5 transition-colors shadow-sm"
                                         >
-                                            <Icon name="List" className="w-4 h-4" />
-                                            列表模式
+                                            <Icon name="BarChart2" className="w-4 h-4" />
+                                            參與排班
                                         </button>
+
+                                        {/* 排班名單按鈕 */}
                                         <button
-                                            onClick={() => setViewMode('calendar')}
-                                            className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                                                viewMode === 'calendar' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                                            }`}
+                                            onClick={() => setIsRosterModalOpen(true)}
+                                            className="hidden sm:flex text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-lg text-sm font-bold items-center gap-1.5 transition-colors shadow-sm"
                                         >
-                                            <Icon name="Grid" className="w-4 h-4" />
-                                            月曆模式
+                                            <Icon name="Users" className="w-4 h-4" />
+                                            {searchUnit === '所有單位' ? '全體名單' : '排班名單'}
                                         </button>
-                                   </div>
+
+                                        <div className="flex bg-slate-100 p-1 rounded-lg">
+                                            <button
+                                                onClick={() => setViewMode('list')}
+                                                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                                                    viewMode === 'list' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                                }`}
+                                            >
+                                                <Icon name="List" className="w-4 h-4" />
+                                                <span className="hidden sm:inline">列表模式</span>
+                                            </button>
+                                            <button
+                                                onClick={() => setViewMode('calendar')}
+                                                className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                                                    viewMode === 'calendar' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                                }`}
+                                            >
+                                                <Icon name="Grid" className="w-4 h-4" />
+                                                <span className="hidden sm:inline">月曆模式</span>
+                                            </button>
+                                       </div>
+                                    </div>
                                 </div>
 
                                 <div className="flex flex-col sm:flex-row gap-4">
@@ -787,27 +1093,45 @@
                                       </div>
                                    </div>
 
-                                   <div className="relative group w-full flex-1">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                      <Icon name="Search" className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
-                                    </div>
-                                    <input
-                                      type="text"
-                                      value={searchTerm}
-                                      onChange={(e) => setSearchTerm(e.target.value)}
-                                      placeholder="查姓名或日期 (例如: 彌勒澄明 或 2026/1/1)..."
-                                      className="block w-full pl-10 pr-10 py-3 border border-slate-300 rounded-lg leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm"
-                                    />
-                                    {/* 新增：清除按鈕 */}
-                                    {searchTerm && (
-                                        <button 
-                                            onClick={() => setSearchTerm('')}
-                                            className="absolute inset-y-0 right-0 px-3 flex items-center text-slate-400 hover:text-red-500 transition-colors"
-                                            title="清除搜尋"
+                                   <div className="relative group w-full flex-1 flex gap-2">
+                                        <div className="relative flex-grow">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <Icon name="Search" className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                                            </div>
+                                            <input
+                                            type="text"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            placeholder="查姓名或日期 (例如: 彌勒澄明 或 2026/1/1)..."
+                                            className="block w-full pl-10 pr-10 py-3 border border-slate-300 rounded-lg leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm"
+                                            />
+                                            {/* 新增：清除按鈕 */}
+                                            {searchTerm && (
+                                                <button 
+                                                    onClick={() => setSearchTerm('')}
+                                                    className="absolute inset-y-0 right-0 px-3 flex items-center text-slate-400 hover:text-red-500 transition-colors"
+                                                    title="清除搜尋"
+                                                >
+                                                    <Icon name="XCircle" className="w-5 h-5 fill-slate-100" />
+                                                </button>
+                                            )}
+                                        </div>
+                                        
+                                        {/* 手機版顯示名單與統計按鈕 (縮小空間) */}
+                                        <button
+                                            onClick={() => setIsStatsModalOpen(true)}
+                                            className="sm:hidden flex text-teal-600 hover:text-teal-800 bg-teal-50 border border-teal-200 px-3 py-3 rounded-lg items-center justify-center transition-colors shadow-sm"
+                                            title="參與排班統計"
                                         >
-                                            <Icon name="XCircle" className="w-5 h-5 fill-slate-100" />
+                                            <Icon name="BarChart2" className="w-5 h-5" />
                                         </button>
-                                    )}
+                                        <button
+                                            onClick={() => setIsRosterModalOpen(true)}
+                                            className="sm:hidden flex text-indigo-600 hover:text-indigo-800 bg-indigo-50 border border-indigo-200 px-3 py-3 rounded-lg items-center justify-center transition-colors shadow-sm"
+                                            title="排班名單"
+                                        >
+                                            <Icon name="Users" className="w-5 h-5" />
+                                        </button>
                                   </div>
                                 </div>
                             </div>
@@ -944,7 +1268,7 @@
             );
         };
 
-        // 啟直 React
+        // 啟動 React
         const container = document.getElementById('root');
         const root = createRoot(container);
         root.render(<App />);
