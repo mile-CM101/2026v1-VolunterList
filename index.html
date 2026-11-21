@@ -639,6 +639,211 @@
             );
         };
 
+// ===== VolunteerChatBot：貼在 index.html 的 App 元件「之前」 =====
+// 使用現有 React、Tailwind、Icon，不需要新增套件或 API Token。
+
+const VolunteerChatBot = ({ data = [], dharmaData = [], availableUnits = [] }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [input, setInput] = useState("");
+    const [messages, setMessages] = useState([
+        {
+            role: "assistant",
+            text: "您好！我是志工排班小助手。可以查詢志工排班、服務日期、單位統計及法會資訊。",
+            suggestions: ["查詢彌勒澄明的排班", "大愛有多少筆排班？", "11月有哪些服務？", "今年還有哪些法會？"]
+        }
+    ]);
+    const [busy, setBusy] = useState(false);
+    const bottomRef = React.useRef(null);
+
+    useEffect(() => {
+        if (isOpen && bottomRef.current) {
+            bottomRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+        }
+    }, [messages, isOpen]);
+
+    const clean = (value) => String(value || "").toLowerCase().replace(/\s+/g, "");
+    const parseMonth = (q) => {
+        const m = q.match(/(?:2026年?)?\s*(1[0-2]|0?[1-9])\s*月/);
+        return m ? Number(m[1]) : null;
+    };
+
+    const answerQuestion = (question) => {
+        const q = clean(question);
+        if (!q) return "請輸入想查詢的內容，例如：志工姓名、單位、月份或法會名稱。";
+
+        // 法會查詢
+        const asksDharma = /法會|佛誕|成道|皇母|祈福|普渡/.test(q);
+        if (asksDharma) {
+            let found = dharmaData.filter(item =>
+                clean(item.title).includes(q) ||
+                clean(item.location).includes(q) ||
+                clean(item.date).includes(q) ||
+                q.includes("法會") ||
+                q.includes("有哪些")
+            );
+            const month = parseMonth(q);
+            if (month) found = found.filter(item => {
+                const m = String(item.date || "").match(/\/(\d{1,2})\//);
+                return m && Number(m[1]) === month;
+            });
+            if (!found.length) return "目前法會資料中找不到符合的項目。你可以試著輸入月份，例如「11月法會」。";
+            return `找到 ${found.length} 筆法會資料：\n\n` + found.slice(0, 12).map(item =>
+                `📿 ${item.date}\n${item.title}\n📍 ${item.location}`
+            ).join("\n\n") + (found.length > 12 ? `\n\n另有 ${found.length - 12} 筆，請再縮小查詢範圍。` : "");
+        }
+
+        // 日期與單位篩選
+        let found = data.slice();
+        const month = parseMonth(q);
+        const dateMatch = q.match(/(2026[\/年.-])?\s*(1[0-2]|0?[1-9])[\/月.-]\s*(3[01]|[12]?\d)?\s*(?:日|號)?/);
+        if (month) found = found.filter(item => {
+            const m = String(item.date || "").match(/\/(\d{1,2})\//);
+            return m && Number(m[1]) === month;
+        });
+        if (dateMatch && dateMatch[3]) {
+            const day = Number(dateMatch[3]);
+            found = found.filter(item => {
+                const d = String(item.date || "").match(/\/\d{1,2}\/(\d{1,2})/);
+                return d && Number(d[1]) === day;
+            });
+        }
+
+        const unit = availableUnits.find(u => u !== "所有單位" && q.includes(clean(u)));
+        if (unit) found = found.filter(item => item.type === unit);
+
+        // 從資料中找姓名，支援以姓名作為查詢條件
+        const names = [...new Set(data.map(item => item.name).filter(Boolean))];
+        const matchedName = names
+            .filter(name => q.includes(clean(name)))
+            .sort((a, b) => clean(b).length - clean(a).length)[0];
+        if (matchedName) found = found.filter(item => item.name === matchedName);
+
+        // 內容/職務關鍵字
+        const ignore = ["查詢", "幫我", "請問", "多少", "幾筆", "排班", "服務", "資料", "志工", "今年", "有哪些", "有多少", "名單"];
+        const tokens = String(question).replace(/[，。！？、,.!?]/g, " ").split(/\s+/).filter(t =>
+            t.length >= 2 && !ignore.includes(t) && !/^\d+$/.test(t)
+        );
+        if (!matchedName && !unit && !month && !dateMatch) {
+            const token = tokens.sort((a, b) => b.length - a.length)[0];
+            if (token) {
+                const key = clean(token);
+                const byText = data.filter(item =>
+                    clean(item.name).includes(key) ||
+                    clean(item.type).includes(key) ||
+                    clean(item.content).includes(key) ||
+                    clean(item.role).includes(key)
+                );
+                if (byText.length) found = byText;
+            }
+        }
+
+        if (!found.length) {
+            return "沒有找到符合條件的排班資料。請確認姓名、單位或日期，也可以試試「某某某的排班」或「大愛 11 月」。";
+        }
+
+        const total = found.length;
+        const uniqueNames = new Set(found.map(item => item.name)).size;
+        const uniqueDates = new Set(found.map(item => item.date)).size;
+
+        if (/幾次|幾筆|次數|總共|統計|多少/.test(q) && matchedName) {
+            const units = [...new Set(found.map(item => item.type))];
+            return `📊 ${matchedName} 的排班統計\n\n• 排班筆數：${total} 筆\n• 服務日期：${uniqueDates} 天\n• 參與單位：${units.join("、") || "無"}\n\n以下列出最近 10 筆：\n` +
+                found.slice(0, 10).map(item => `• ${item.rawDate}｜${item.type}｜${item.role || "志工"}${item.content ? "｜" + item.content : ""}`).join("\n");
+        }
+
+        const summary = `找到 ${total} 筆排班資料（${uniqueNames} 位志工、${uniqueDates} 個服務日期）。`;
+        const list = found.slice(0, 12).map(item =>
+            `• ${item.rawDate}｜${item.type}｜${item.name}${item.role ? "｜" + item.role : ""}${item.content ? "｜" + item.content : ""}`
+        ).join("\n");
+        return `🔎 ${summary}\n\n${list}${total > 12 ? `\n\n尚有 ${total - 12} 筆，請增加姓名、月份或單位條件縮小範圍。` : ""}`;
+    };
+
+    const sendMessage = (value = input) => {
+        const question = String(value || "").trim();
+        if (!question || busy) return;
+        setInput("");
+        setBusy(true);
+        setMessages(prev => [...prev, { role: "user", text: question }]);
+
+        // 讓使用者先看到訊息，再在下一個事件循環產生本機搜尋結果
+        window.setTimeout(() => {
+            const reply = answerQuestion(question);
+            setMessages(prev => [...prev, { role: "assistant", text: reply }]);
+            setBusy(false);
+        }, 180);
+    };
+
+    return (
+        <div className="fixed bottom-5 right-5 z-[80]">
+            {isOpen && (
+                <section className="mb-3 w-[min(92vw,390px)] h-[min(72vh,620px)] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+                    <header className="bg-gradient-to-r from-emerald-700 to-teal-600 text-white px-4 py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center">
+                                <Icon name="Bot" className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <div className="font-bold">Volunteer Assistant</div>
+                                <div className="text-xs text-emerald-100">智慧排班查詢 · 本機資料搜尋</div>
+                            </div>
+                        </div>
+                        <button onClick={() => setIsOpen(false)} className="p-2 rounded-lg hover:bg-white/15" aria-label="關閉聊天">
+                            <Icon name="X" className="w-5 h-5" />
+                        </button>
+                    </header>
+
+                    <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-slate-50">
+                        <div className="text-center text-[11px] text-slate-400">
+                            回答依目前載入的志工 JSON 資料產生，不使用外部 AI API
+                        </div>
+                        {messages.map((message, index) => (
+                            <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                                <div className={`max-w-[88%] rounded-2xl px-3 py-2.5 text-sm shadow-sm ${
+                                    message.role === "user"
+                                        ? "bg-emerald-600 text-white rounded-br-md"
+                                        : "bg-white border border-slate-200 text-slate-700 rounded-bl-md"
+                                }`}>
+                                    <div className="whitespace-pre-wrap break-words leading-relaxed">{message.text}</div>
+                                    {message.suggestions && (
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {message.suggestions.map((s, i) => (
+                                                <button key={i} onClick={() => sendMessage(s)}
+                                                    className="text-xs px-2.5 py-1.5 rounded-full border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100">
+                                                    {s}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                        {busy && <div className="text-xs text-slate-400">正在搜尋資料…</div>}
+                        <div ref={bottomRef} />
+                    </div>
+
+                    <form onSubmit={e => { e.preventDefault(); sendMessage(); }} className="p-3 border-t border-slate-200 bg-white flex gap-2">
+                        <input value={input} onChange={e => setInput(e.target.value)}
+                            placeholder="輸入姓名、單位、月份或法會…"
+                            className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" />
+                        <button type="submit" disabled={!input.trim() || busy}
+                            className="w-11 h-11 shrink-0 rounded-xl bg-emerald-600 text-white flex items-center justify-center hover:bg-emerald-700 disabled:opacity-40">
+                            <Icon name="Send" className="w-5 h-5" />
+                        </button>
+                    </form>
+                </section>
+            )}
+
+            <button onClick={() => setIsOpen(v => !v)}
+                className="ml-auto w-14 h-14 rounded-full bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-xl hover:scale-105 transition-transform flex items-center justify-center"
+                aria-label="開啟志工聊天小助手">
+                {isOpen ? <Icon name="X" className="w-6 h-6" /> : <Icon name="MessageCircle" className="w-7 h-7" />}
+            </button>
+        </div>
+    );
+};
+
+
+        
         // --- 主應用程式 ---
         const App = () => {
             // -- Auth State --
@@ -976,7 +1181,13 @@
                         onClose={() => setIsStatsModalOpen(false)}
                         data={flattenedData}
                     />
-                
+
+<VolunteerChatBot
+    data={flattenedData}
+    dharmaData={dharmaData}
+    availableUnits={availableUnits}
+/>
+                        
                     <header className="bg-emerald-700 text-white shadow-lg shrink-0">
                         <div className="max-w-5xl mx-auto px-4 py-4">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
