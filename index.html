@@ -667,96 +667,175 @@ const VolunteerChatBot = ({ data = [], dharmaData = [], availableUnits = [] }) =
         return m ? Number(m[1]) : null;
     };
 
-    const answerQuestion = (question) => {
-        const q = clean(question);
-        if (!q) return "請輸入想查詢的內容，例如：志工姓名、單位、月份或法會名稱。";
 
-        // 法會查詢
-        const asksDharma = /法會|佛誕|成道|皇母|祈福|普渡/.test(q);
-        if (asksDharma) {
-            let found = dharmaData.filter(item =>
-                clean(item.title).includes(q) ||
-                clean(item.location).includes(q) ||
-                clean(item.date).includes(q) ||
-                q.includes("法會") ||
-                q.includes("有哪些")
-            );
-            const month = parseMonth(q);
-            if (month) found = found.filter(item => {
-                const m = String(item.date || "").match(/\/(\d{1,2})\//);
+    // ===== 修正版 answerQuestion =====
+// 請在 index.html 的 VolunteerChatBot 元件內，完整取代原本：
+// const answerQuestion = (question) => { ... };
+
+const answerQuestion = (question) => {
+    const q = clean(question);
+    if (!q) return "請輸入姓名、單位、日期或月份。";
+
+    // 從 YYYY/M/D、YYYY-M-D、YYYY年M月D日 解析日期
+    const dateMatch =
+        question.match(/((?:19|20)\d{2})\s*[\/.-年]\s*(\d{1,2})\s*[\/.-月]\s*(\d{1,2})\s*日?/);
+    const shortDateMatch = !dateMatch
+        ? question.match(/(^|[^\d])(\d{1,2})\s*[\/.-月]\s*(\d{1,2})\s*日?/)
+        : null;
+
+    let targetDate = null;
+    if (dateMatch) {
+        targetDate = `${dateMatch[1]}/${String(dateMatch[2]).padStart(2, "0")}/${String(dateMatch[3]).padStart(2, "0")}`;
+    } else if (shortDateMatch) {
+        targetDate = `2026/${String(shortDateMatch[2]).padStart(2, "0")}/${String(shortDateMatch[3]).padStart(2, "0")}`;
+    }
+
+    // 日期區間語意：之後/以後為嚴格大於；起/開始/當天起為大於等於
+    const isAfter = /之後|以後|過後|後還有/.test(question);
+    const isFrom = /起|開始|以來|當天起/.test(question);
+    const isBefore = /之前|以前|前還有/.test(question);
+    const isUntil = /以前|截至|以前為止|之前為止/.test(question);
+
+    const getDateKey = (item) => {
+        const raw = String(item.date || item.rawDate || "");
+        const m = raw.match(/((?:19|20)\d{2})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
+        if (!m) return "";
+        return `${m[1]}/${String(m[2]).padStart(2, "0")}/${String(m[3]).padStart(2, "0")}`;
+    };
+
+    const monthMatch = question.match(/(?:20\d{2}\s*年?)?\s*(1[0-2]|0?[1-9])\s*月/);
+    const month = monthMatch ? Number(monthMatch[1]) : null;
+
+    // 法會資料查詢
+    const asksDharma = /法會|佛誕|成道|皇母|祈福|普渡/.test(q);
+    if (asksDharma) {
+        let found = dharmaData.slice();
+
+        if (targetDate) {
+            found = found.filter(item => {
+                const raw = String(item.date || "");
+                const m = raw.match(/((?:19|20)\d{2})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
+                if (!m) return false;
+                const key = `${m[1]}/${String(m[2]).padStart(2, "0")}/${String(m[3]).padStart(2, "0")}`;
+                if (isAfter) return key > targetDate;
+                if (isFrom) return key >= targetDate;
+                if (isBefore) return key < targetDate;
+                if (isUntil) return key <= targetDate;
+                return key === targetDate;
+            });
+        } else if (month) {
+            found = found.filter(item => {
+                const m = String(item.date || "").match(/[\/.-](\d{1,2})[\/.-]/);
                 return m && Number(m[1]) === month;
             });
-            if (!found.length) return "目前法會資料中找不到符合的項目。你可以試著輸入月份，例如「11月法會」。";
-            return `找到 ${found.length} 筆法會資料：\n\n` + found.slice(0, 12).map(item =>
-                `📿 ${item.date}\n${item.title}\n📍 ${item.location}`
-            ).join("\n\n") + (found.length > 12 ? `\n\n另有 ${found.length - 12} 筆，請再縮小查詢範圍。` : "");
         }
 
-        // 日期與單位篩選
-        let found = data.slice();
-        const month = parseMonth(q);
-        const dateMatch = q.match(/(2026[\/年.-])?\s*(1[0-2]|0?[1-9])[\/月.-]\s*(3[01]|[12]?\d)?\s*(?:日|號)?/);
-        if (month) found = found.filter(item => {
-            const m = String(item.date || "").match(/\/(\d{1,2})\//);
-            return m && Number(m[1]) === month;
+        const keyword = question.replace(/20\d{2}|[0-9]{1,2}[\/.-][0-9]{1,2}|[0-9]{1,2}月|之後|以後|過後|有哪些|法會|查詢|請問/g, "").trim();
+        if (keyword.length >= 2) {
+            const k = clean(keyword);
+            const narrowed = found.filter(item =>
+                clean(item.title).includes(k) || clean(item.location).includes(k)
+            );
+            if (narrowed.length) found = narrowed;
+        }
+
+        found.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+        if (!found.length) return "法會資料中沒有找到符合條件的項目。";
+        return `找到 ${found.length} 筆法會資料：\n\n` +
+            found.slice(0, 20).map(item => `📿 ${item.date}\n${item.title}\n📍 ${item.location}`).join("\n\n");
+    }
+
+    // 先找使用者提到的姓名。item.name 可能是一整串多人名單，
+    // 因此採「包含姓名」而不是 item.name === 姓名。
+    const allNameCandidates = [...new Set(data.flatMap(item =>
+        String(item.name || "")
+            .split(/[，,、\n]+/)
+            .map(part => part.replace(/[（(].*?[）)]/g, "").trim())
+            .filter(Boolean)
+    ))];
+
+    const matchedName = allNameCandidates
+        .filter(name => clean(name).length >= 2 && q.includes(clean(name)))
+        .sort((a, b) => clean(b).length - clean(a).length)[0];
+
+    let found = data.slice();
+
+    // 日期條件：日期區間優先於單月條件
+    if (targetDate) {
+        found = found.filter(item => {
+            const key = getDateKey(item);
+            if (!key) return false;
+            if (isAfter) return key > targetDate;
+            if (isFrom) return key >= targetDate;
+            if (isBefore) return key < targetDate;
+            if (isUntil) return key <= targetDate;
+            return key === targetDate;
         });
-        if (dateMatch && dateMatch[3]) {
-            const day = Number(dateMatch[3]);
-            found = found.filter(item => {
-                const d = String(item.date || "").match(/\/\d{1,2}\/(\d{1,2})/);
-                return d && Number(d[1]) === day;
-            });
+    } else if (month) {
+        found = found.filter(item => {
+            const key = getDateKey(item);
+            return key && Number(key.split("/")[1]) === month;
+        });
+    }
+
+    // 單位條件
+    const unit = availableUnits
+        .filter(u => u && u !== "所有單位")
+        .sort((a, b) => clean(b).length - clean(a).length)
+        .find(u => q.includes(clean(u)));
+    if (unit) found = found.filter(item => item.type === unit);
+
+    // 姓名條件：可命中「彌勒澄明（第二層24辦）」這類多人合併欄位
+    if (matchedName) {
+        found = found.filter(item => clean(item.name).includes(clean(matchedName)));
+    }
+
+    // 內容關鍵字（只有在未辨識姓名、單位、日期時才作為備援）
+    if (!matchedName && !unit && !targetDate && !month) {
+        const stopWords = ["查詢", "幫我", "請問", "多少", "幾筆", "排班", "服務", "資料", "志工", "今年", "有哪些", "有多少", "名單", "還有"];
+        const tokens = String(question)
+            .replace(/[，。！？、,.!?]/g, " ")
+            .split(/\s+/)
+            .filter(t => t.length >= 2 && !stopWords.includes(t) && !/^\d+$/.test(t));
+        const token = tokens.sort((a, b) => b.length - a.length)[0];
+        if (token) {
+            const key = clean(token);
+            const byText = found.filter(item =>
+                clean(item.name).includes(key) ||
+                clean(item.type).includes(key) ||
+                clean(item.content).includes(key) ||
+                clean(item.role).includes(key)
+            );
+            if (byText.length) found = byText;
         }
+    }
 
-        const unit = availableUnits.find(u => u !== "所有單位" && q.includes(clean(u)));
-        if (unit) found = found.filter(item => item.type === unit);
+    found.sort((a, b) => getDateKey(a).localeCompare(getDateKey(b)));
 
-        // 從資料中找姓名，支援以姓名作為查詢條件
-        const names = [...new Set(data.map(item => item.name).filter(Boolean))];
-        const matchedName = names
-            .filter(name => q.includes(clean(name)))
-            .sort((a, b) => clean(b).length - clean(a).length)[0];
-        if (matchedName) found = found.filter(item => item.name === matchedName);
+    if (!found.length) {
+        return "沒有找到符合條件的排班資料。請確認姓名、單位或日期，也可以試試「彌勒澄明 11/21 之後」。";
+    }
 
-        // 內容/職務關鍵字
-        const ignore = ["查詢", "幫我", "請問", "多少", "幾筆", "排班", "服務", "資料", "志工", "今年", "有哪些", "有多少", "名單"];
-        const tokens = String(question).replace(/[，。！？、,.!?]/g, " ").split(/\s+/).filter(t =>
-            t.length >= 2 && !ignore.includes(t) && !/^\d+$/.test(t)
-        );
-        if (!matchedName && !unit && !month && !dateMatch) {
-            const token = tokens.sort((a, b) => b.length - a.length)[0];
-            if (token) {
-                const key = clean(token);
-                const byText = data.filter(item =>
-                    clean(item.name).includes(key) ||
-                    clean(item.type).includes(key) ||
-                    clean(item.content).includes(key) ||
-                    clean(item.role).includes(key)
-                );
-                if (byText.length) found = byText;
-            }
-        }
+    const total = found.length;
+    const uniqueDates = new Set(found.map(item => getDateKey(item))).size;
+    const uniqueNames = new Set(found.map(item => item.name)).size;
 
-        if (!found.length) {
-            return "沒有找到符合條件的排班資料。請確認姓名、單位或日期，也可以試試「某某某的排班」或「大愛 11 月」。";
-        }
+    if (/幾次|幾筆|次數|總共|統計|多少/.test(q) && matchedName) {
+        const units = [...new Set(found.map(item => item.type))];
+        return `📊 ${matchedName} 的排班統計\n\n• 排班筆數：${total} 筆\n• 服務日期：${uniqueDates} 天\n• 參與單位：${units.join("、")}\n\n` +
+            found.slice(0, 20).map(item => `• ${item.rawDate || item.date}｜${item.type}｜${item.role || "志工"}｜${item.name}`).join("\n");
+    }
 
-        const total = found.length;
-        const uniqueNames = new Set(found.map(item => item.name)).size;
-        const uniqueDates = new Set(found.map(item => item.date)).size;
+    const summary = `找到 ${total} 筆排班資料（${uniqueNames} 筆名單紀錄、${uniqueDates} 個服務日期）。`;
+    const list = found.slice(0, 20).map(item =>
+        `• ${item.rawDate || item.date}｜${item.type}｜${item.name}${item.role ? "｜" + item.role : ""}${item.content ? "｜" + item.content : ""}`
+    ).join("\n");
 
-        if (/幾次|幾筆|次數|總共|統計|多少/.test(q) && matchedName) {
-            const units = [...new Set(found.map(item => item.type))];
-            return `📊 ${matchedName} 的排班統計\n\n• 排班筆數：${total} 筆\n• 服務日期：${uniqueDates} 天\n• 參與單位：${units.join("、") || "無"}\n\n以下列出最近 10 筆：\n` +
-                found.slice(0, 10).map(item => `• ${item.rawDate}｜${item.type}｜${item.role || "志工"}${item.content ? "｜" + item.content : ""}`).join("\n");
-        }
+    return `🔎 ${summary}\n\n${list}${total > 20 ? `\n\n還有 ${total - 20} 筆，請增加單位或日期條件縮小範圍。` : ""}`;
+};
+ 
 
-        const summary = `找到 ${total} 筆排班資料（${uniqueNames} 位志工、${uniqueDates} 個服務日期）。`;
-        const list = found.slice(0, 12).map(item =>
-            `• ${item.rawDate}｜${item.type}｜${item.name}${item.role ? "｜" + item.role : ""}${item.content ? "｜" + item.content : ""}`
-        ).join("\n");
-        return `🔎 ${summary}\n\n${list}${total > 12 ? `\n\n尚有 ${total - 12} 筆，請增加姓名、月份或單位條件縮小範圍。` : ""}`;
-    };
+    
 
     const sendMessage = (value = input) => {
         const question = String(value || "").trim();
